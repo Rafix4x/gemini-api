@@ -140,10 +140,10 @@ print(resp.choices[0].message.content)
 
 ## 📝 Notes on hosting
 
-Google applies risk-based filtering on its web endpoint. Requests from
-residential networks pass through routinely (verified on Android/Termux).
-Traffic from cloud/datacenter ranges may occasionally trigger `403`/`429`;
-setting `IMPERSONATE` to a browser fingerprint resolves most cases.
+Works out of the box on Render (verified on the free tier). If you ever hit
+`403`/`429` responses from Google's endpoint — most likely from a heavily-flagged
+IP range — setting `IMPERSONATE` to a browser fingerprint (`chrome_120`…) resolves
+most cases.
 
 ## 📄 License
 
