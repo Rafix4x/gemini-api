@@ -111,7 +111,6 @@ func (a *App) uploadImages(images []format.Image) ([]string, error) {
 	for i, img := range images {
 		data := img.Data
 
-		// If image has URL but no data, fetch the bytes first.
 		if len(data) == 0 && img.URL != "" {
 			fetched, err := multimodal.FetchImageBytes(requester, img.URL)
 			if err != nil {
@@ -127,7 +126,6 @@ func (a *App) uploadImages(images []format.Image) ([]string, error) {
 			return nil, fmt.Errorf("image %d has no data", i)
 		}
 
-		// Detect MIME from magic bytes if not set or generic.
 		mime := img.MIME
 		if mime == "" || mime == "image/png" {
 			mime = multimodal.DetectImageMime(data)

@@ -19,7 +19,6 @@ type OpenAITool struct {
 	Type     string         `json:"type"`
 	Function OpenAIFunction `json:"function"`
 
-	// Flat tool declarations fallback
 	Name        string `json:"name,omitempty"`
 	Description string `json:"description,omitempty"`
 	Parameters  any    `json:"parameters,omitempty"`

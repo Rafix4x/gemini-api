@@ -13,12 +13,12 @@ import (
 type Image struct {
 	Data []byte
 	MIME string
-	URL  string // Remote URL passthrough (when data not yet fetched)
+	URL  string 
 }
 
 func BuildToolPrompt(defs []models.GoogleFunctionDeclaration) string {
 	specBytes, _ := json.Marshal(defs)
-	// Tool slimming: if tool definitions exceed 30KB, re-marshal with name+description only.
+
 	if len(specBytes) > 30000 {
 		slimmed := make([]models.GoogleFunctionDeclaration, len(defs))
 		for i, d := range defs {

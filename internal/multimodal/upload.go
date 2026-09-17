@@ -28,7 +28,6 @@ func UploadImage(client gemini.Requester, tokens PageTokens, imgBytes []byte, mi
 
 	cookieInfo, _ := cookieCache.Load()
 
-	// Step 1: Initiate resumable upload
 	startHeaders := make(http.Header)
 	startHeaders.Set("Push-ID", pushID)
 	startHeaders.Set("X-Tenant-Id", "bard-storage")
@@ -68,7 +67,6 @@ func UploadImage(client gemini.Requester, tokens PageTokens, imgBytes []byte, mi
 		return "", fmt.Errorf("No upload URL in response headers")
 	}
 
-	// Step 2: Upload file data + finalize
 	uploadHeaders := make(http.Header)
 	uploadHeaders.Set("X-Goog-Upload-Command", "upload, finalize")
 	uploadHeaders.Set("X-Goog-Upload-Offset", "0")
@@ -101,7 +99,7 @@ func UploadImage(client gemini.Requester, tokens PageTokens, imgBytes []byte, mi
 }
 
 func FetchImageBytes(client gemini.Requester, imageURL string) ([]byte, error) {
-	// SSRF guard: only allow http/https schemes (parsed, not prefix-matched).
+
 	parsed, err := url.Parse(strings.TrimSpace(imageURL))
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return nil, fmt.Errorf("invalid image URL scheme, only http/https allowed")

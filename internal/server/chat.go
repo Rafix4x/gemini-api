@@ -46,7 +46,6 @@ func (a *App) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Upload images to Gemini storage.
 	var fileRefs []string
 	if len(images) > 0 {
 		fileRefs, err = a.uploadImages(images)
@@ -67,7 +66,6 @@ func (a *App) handleChat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Emit first chunk with role to match OpenAI streaming protocol.
 		firstChunk := models.OpenAIChatResponse{
 			ID:      cid,
 			Object:  "chat.completion.chunk",

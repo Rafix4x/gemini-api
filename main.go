@@ -74,7 +74,6 @@ func main() {
 
 	app := server.New(cfg, currentVersion)
 
-	// Blocking BL refresh at startup - never fail boot on error.
 	if newBL, changed, blErr := app.Gem.UpdateBLIfNeeded(); blErr != nil {
 		log.Printf("BL auto-update failed (non-fatal): %v", blErr)
 	} else if changed {

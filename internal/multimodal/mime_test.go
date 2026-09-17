@@ -59,12 +59,12 @@ func TestDetectImageMime(t *testing.T) {
 		{
 			name: "too short",
 			data: []byte{0x89, 0x50},
-			want: "image/png", // fallback
+			want: "image/png", 
 		},
 		{
 			name: "empty",
 			data: []byte{},
-			want: "image/png", // fallback
+			want: "image/png", 
 		},
 	}
 
@@ -79,7 +79,7 @@ func TestDetectImageMime(t *testing.T) {
 }
 
 func TestDecodeBase64Raw(t *testing.T) {
-	// Standard base64
+
 	encoded := base64.StdEncoding.EncodeToString([]byte("hello"))
 	got, err := DecodeBase64Raw(encoded)
 	if err != nil {
@@ -89,7 +89,6 @@ func TestDecodeBase64Raw(t *testing.T) {
 		t.Errorf("DecodeBase64Raw standard = %q, want %q", string(got), "hello")
 	}
 
-	// URL-safe base64
 	encodedURL := base64.URLEncoding.EncodeToString([]byte("hello world"))
 	got, err = DecodeBase64Raw(encodedURL)
 	if err != nil {
@@ -99,7 +98,6 @@ func TestDecodeBase64Raw(t *testing.T) {
 		t.Errorf("DecodeBase64Raw URL-safe = %q, want %q", string(got), "hello world")
 	}
 
-	// Raw standard (no padding)
 	encodedRaw := base64.RawStdEncoding.EncodeToString([]byte("test"))
 	got, err = DecodeBase64Raw(encodedRaw)
 	if err != nil {

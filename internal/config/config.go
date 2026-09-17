@@ -55,9 +55,6 @@ func Load(path string) (Config, error) {
 		return cfg, err
 	}
 
-	// Use temporary struct with pointer fields or interface to handle null values from JSON if needed,
-	// but standard unmarshal over struct fields handles JSON null for strings by leaving existing or setting zero-value if unmarshaling map/struct.
-	// Let's ensure string fields default properly if JSON has explicitly `null`.
 	var aux struct {
 		Port              *int      `json:"port"`
 		Host              *string   `json:"host"`

@@ -31,14 +31,6 @@ func applyPersistenceFlags(inner []any, cfg config.Config) {
 	}
 }
 
-// BuildBody constructs the form-encoded payload (`f.req`) expected by Gemini's frontend RPC endpoint.
-// Gemini web uses a sparse JSON array (102 elements) where specific indices represent payload parameters:
-// - Index 0: Prompt text and image attachment references
-// - Index 17: Reasoning/thinking mode depth
-// - Index 41: Persistence/temporary chat mode (1=temporary, 2=persistent)
-// - Index 45: Additional persistence flag (1 when temporary)
-// - Index 59: Request UUID
-// - Index 79: Target model mode ID
 func BuildBody(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any, cfg config.Config) string {
 	inner := make([]any, GeminiPayloadSize)
 
@@ -90,7 +82,6 @@ func BuildBody(prompt string, modelID, thinkMode int, fileRefs []string, extra m
 	return form.Encode()
 }
 
-// BuildURL constructs the Gemini API endpoint URL. If blOverride is non-empty, it is used instead of cfg.GeminiBL.
 func BuildURL(cfg config.Config, blOverride string) string {
 	reqid := time.Now().Unix() % 1000000
 	prefix := AccountPrefix(cfg.AuthUser)

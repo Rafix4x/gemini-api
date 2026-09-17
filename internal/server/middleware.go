@@ -80,7 +80,7 @@ func (a *App) withCORS(next http.Handler) http.Handler {
 	})
 }
 
-const maxRequestBodySize = 32 << 20 // 32 MB limit
+const maxRequestBodySize = 32 << 20 
 
 func (a *App) withAuthAndLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

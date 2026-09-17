@@ -50,7 +50,7 @@ func TestMessagesToPrompt(t *testing.T) {
 }
 
 func TestDecodeDataURL(t *testing.T) {
-	// Valid data URL
+
 	b64 := "SGVsbG8="
 	dataURL := "data:text/plain;base64," + b64
 	data, mime, err := DecodeDataURL(dataURL)
@@ -64,13 +64,11 @@ func TestDecodeDataURL(t *testing.T) {
 		t.Errorf("DecodeDataURL mime = %q, want %q", mime, "text/plain")
 	}
 
-	// Invalid: not a data URL
 	_, _, err = DecodeDataURL("https://example.com/img.png")
 	if err == nil {
 		t.Error("DecodeDataURL should fail for non-data URL")
 	}
 
-	// Non-base64 data URL: percent-decoded per upstream parity
 	data, mime, err = DecodeDataURL("data:text/plain,hello%20world")
 	if err != nil {
 		t.Fatalf("DecodeDataURL non-base64: unexpected error: %v", err)
@@ -152,7 +150,7 @@ func TestImageFromPartInputImage(t *testing.T) {
 }
 
 func TestImageFromPartStringForm(t *testing.T) {
-	// Upstream parity: image_url may be a plain string, not just {url:...}.
+
 	part := map[string]any{
 		"type":      "image_url",
 		"image_url": "https://example.com/photo.png",
@@ -167,7 +165,7 @@ func TestImageFromPartStringForm(t *testing.T) {
 }
 
 func TestImageFromPartMimeTypeKey(t *testing.T) {
-	// Upstream parity: mime_type / media_type keys.
+
 	part := map[string]any{
 		"type":      "input_image",
 		"data":      "SGVsbG8=",
@@ -183,8 +181,7 @@ func TestImageFromPartMimeTypeKey(t *testing.T) {
 }
 
 func TestResponsesInputPreservesImages(t *testing.T) {
-	// Fatal fix: image parts must survive as structured content,
-	// not flattened to a placeholder string.
+
 	input := []any{
 		map[string]any{
 			"role": "user",
@@ -270,7 +267,7 @@ func TestMessagesToPromptWithImages(t *testing.T) {
 }
 
 func TestToolSlimming(t *testing.T) {
-	// Create enough tools to exceed 30KB threshold
+
 	var tools []models.OpenAITool
 	for i := 0; i < 200; i++ {
 		tools = append(tools, models.OpenAITool{
@@ -300,10 +297,6 @@ func TestToolSlimming(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	// The prompt should still contain the tool definitions section (slimmed)
-	// Verify slimming happened: the log message "Tool defs too large ... slimming"
-	// confirms the threshold was hit. With 200 large tools, even slimmed output is substantial.
-	// The key verification is that the function doesn't error and produces a valid prompt.
 	if !strings.Contains(prompt, "# Tool Use") {
 		t.Errorf("Prompt should contain tool section, got length %d", len(prompt))
 	}

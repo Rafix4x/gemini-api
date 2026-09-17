@@ -85,7 +85,6 @@ func NewClient(cfg config.Config) *Client {
 	}
 }
 
-// CurrentBL returns the current BL value, preferring the mutable field over config.
 func (c *Client) CurrentBL() string {
 	c.blMu.Lock()
 	defer c.blMu.Unlock()
@@ -95,15 +94,12 @@ func (c *Client) CurrentBL() string {
 	return c.Cfg.GeminiBL
 }
 
-// SetBL updates the BL value.
 func (c *Client) SetBL(bl string) {
 	c.blMu.Lock()
 	defer c.blMu.Unlock()
 	c.bl = bl
 }
 
-// UpdateBLIfNeeded fetches the latest BL from Gemini and updates it if different from current.
-// Returns (newBL, changed, error).
 func (c *Client) UpdateBLIfNeeded() (string, bool, error) {
 	newBL, err := FetchLatestBL(c.HTTP)
 	if err != nil {
@@ -196,14 +192,14 @@ func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []stri
 		} else {
 			if err := c.triageStatus(resp); err != nil {
 				_ = resp.Body.Close()
-				// 405 = BL expired. Refresh once and retry without consuming an attempt.
+
 				if !blRefreshed && resp.StatusCode == http.StatusMethodNotAllowed {
 					blRefreshed = true
 					if _, changed, blErr := c.UpdateBLIfNeeded(); blErr == nil && changed {
 						c.Logf("BL auto-updated, retrying request")
 						bodyStr = BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 						reqURL = BuildURL(c.Cfg, c.CurrentBL())
-						attempt-- // retry without consuming an attempt
+						attempt-- 
 						continue
 					}
 				}
@@ -243,8 +239,7 @@ func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs 
 	var lastErr error
 
 	for attempt := 0; attempt < c.Cfg.RetryAttempts; attempt++ {
-		// Reset the chunk buffer on each retry, but preserve the prevText state.
-		// This ensures we don't emit duplicate deltas to the client if a stream connection drops halfway.
+
 		parser.ResetBuffer()
 
 		req, err := http.NewRequest("POST", reqURL, strings.NewReader(bodyStr))
@@ -259,14 +254,14 @@ func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs 
 		} else {
 			if err := c.triageStatus(resp); err != nil {
 				_ = resp.Body.Close()
-				// 405 = BL expired. Refresh once and retry without consuming an attempt.
+
 				if !blRefreshed && resp.StatusCode == http.StatusMethodNotAllowed {
 					blRefreshed = true
 					if _, changed, blErr := c.UpdateBLIfNeeded(); blErr == nil && changed {
 						c.Logf("BL auto-updated, retrying stream request")
 						bodyStr = BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 						reqURL = BuildURL(c.Cfg, c.CurrentBL())
-						attempt-- // retry without consuming an attempt
+						attempt-- 
 						continue
 					}
 				}
@@ -317,9 +312,6 @@ func (c *Client) streamAttempt(body io.Reader, parser *StreamParser, emit func(s
 	}
 }
 
-// isClientDisconnect helps distinguish between upstream server errors (which we might want to retry)
-// and actual client-side disconnections or non-retryable transport errors.
-// If the client disconnected, we should abort the retry loop immediately to save resources.
 func isClientDisconnect(err error) bool {
 	if err == nil {
 		return false

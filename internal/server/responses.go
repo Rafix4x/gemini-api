@@ -88,7 +88,6 @@ func (a *App) handleResponses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Upload images to Gemini storage.
 	var fileRefs []string
 	if len(images) > 0 {
 		fileRefs, err = a.uploadImages(images)

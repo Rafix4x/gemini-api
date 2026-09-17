@@ -22,9 +22,6 @@ func RandHex(n int) string {
 	return hex.EncodeToString(bytes)[:n]
 }
 
-// DecodeDataURL decodes a `data:<mime>[;base64],<payload>` URL into bytes and MIME.
-// Mirrors upstream _decode_data_url: base64 payloads are strictly decoded,
-// non-base64 payloads are percent-decoded.
 func DecodeDataURL(dataURL string) ([]byte, string, error) {
 	m := reDataURL.FindStringSubmatch(dataURL)
 	if m == nil {
@@ -56,13 +53,12 @@ func DecodeDataURL(dataURL string) ([]byte, string, error) {
 	return decoded, mime, nil
 }
 
-// ImageFromURL returns an Image with URL set for remote passthrough.
 func ImageFromURL(rawURL string) Image {
-	// Try to extract MIME from URL extension
+
 	mime := "image/png"
 	if extIdx := strings.LastIndex(rawURL, "."); extIdx != -1 {
 		ext := strings.ToLower(rawURL[extIdx:])
-		// Strip query params
+
 		if qIdx := strings.Index(ext, "?"); qIdx != -1 {
 			ext = ext[:qIdx]
 		}
@@ -84,7 +80,6 @@ func ImageFromURL(rawURL string) Image {
 	return Image{URL: rawURL, MIME: mime}
 }
 
-// imageFromURLString resolves a URL string (remote or data:) into an Image.
 func imageFromURLString(rawURL, mimeHint string) (Image, bool) {
 	if rawURL == "" {
 		return Image{}, false
@@ -112,8 +107,6 @@ func partMime(m map[string]any) string {
 	return ""
 }
 
-// ImageFromPart parses an OpenAI-style content part (image_url, input_image, image) into an Image.
-// Mirrors upstream _image_from_part, including image_url as a plain string.
 func ImageFromPart(mapItem map[string]any) (Image, bool) {
 	iType, _ := mapItem["type"].(string)
 
@@ -182,7 +175,6 @@ func ImageFromPart(mapItem map[string]any) (Image, bool) {
 	return Image{}, false
 }
 
-// BuildToolChoiceInstruction returns a prompt suffix based on the tool_choice parameter.
 func BuildToolChoiceInstruction(toolChoice any) string {
 	if strChoice, ok := toolChoice.(string); ok {
 		if strChoice == "none" {
@@ -229,7 +221,7 @@ func MessagesToPrompt(req models.OpenAIChatRequest) (string, []Image, error) {
 		if len(toolDefs) > 0 {
 			constraint := BuildToolChoiceInstruction(req.ToolChoice)
 			defsJSON, _ := json.Marshal(toolDefs)
-			// Tool slimming: if tool definitions exceed 30KB, re-marshal with name+description only.
+
 			if len(defsJSON) > 30000 {
 				log.Printf("Tool defs too large (%d bytes), slimming to name+description only", len(defsJSON))
 				slimmed := make([]models.OpenAIFunction, len(toolDefs))
@@ -313,9 +305,6 @@ func MessagesToPrompt(req models.OpenAIChatRequest) (string, []Image, error) {
 
 var reToolCall = regexp.MustCompile(`(?s)\x60\x60\x60tool_call\s*\n(.*?)\n\x60\x60\x60`)
 
-// ParseToolCalls extracts tool calls from the raw string output of the model.
-// The model is instructed to output tool calls in markdown blocks e.g. ```tool_call\n{...}\n```.
-// This function parses those blocks, removes them from the text, and returns the cleaned text along with structured ToolCalls.
 func ParseToolCalls(text string) (string, []models.OpenAIToolCall) {
 	var toolCalls []models.OpenAIToolCall
 	matches := reToolCall.FindAllStringSubmatchIndex(text, -1)

@@ -101,17 +101,13 @@ func ResponsesInputToMessages(input any, instructions string) ([]map[string]any,
 					if role == "" {
 						role = "user"
 					}
-					// Preserve raw content (list or string) so downstream
-					// MessagesToPrompt can extract image parts. Flattening to
-					// a string here would silently drop image data.
+
 					rawContent := mapItem["content"]
 					if rawContent == nil {
 						rawContent = ""
 					}
 					if cList, ok := rawContent.([]any); ok {
-						// Normalize text-only lists to a joined string for
-						// cleaner prompts, but keep the list when it contains
-						// image parts.
+
 						hasImage := false
 						for _, c := range cList {
 							if cMap, ok := c.(map[string]any); ok {

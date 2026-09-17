@@ -43,7 +43,6 @@ func TestAuthMatrix(t *testing.T) {
 	app := New(cfg, "test-version")
 	handler := app.Handler()
 
-	// 1. No key -> 401
 	req1 := httptest.NewRequest("GET", "/v1/models", nil)
 	rec1 := httptest.NewRecorder()
 	handler.ServeHTTP(rec1, req1)
@@ -51,7 +50,6 @@ func TestAuthMatrix(t *testing.T) {
 		t.Errorf("Expected 401 without auth, got %d", rec1.Code)
 	}
 
-	// 2. Wrong key -> 401
 	req2 := httptest.NewRequest("GET", "/v1/models", nil)
 	req2.Header.Set("Authorization", "Bearer wrong-key")
 	rec2 := httptest.NewRecorder()
@@ -60,7 +58,6 @@ func TestAuthMatrix(t *testing.T) {
 		t.Errorf("Expected 401 with wrong key, got %d", rec2.Code)
 	}
 
-	// 3. Valid Bearer token -> 200
 	req3 := httptest.NewRequest("GET", "/v1/models", nil)
 	req3.Header.Set("Authorization", "Bearer sk-secret-key")
 	rec3 := httptest.NewRecorder()
@@ -69,7 +66,6 @@ func TestAuthMatrix(t *testing.T) {
 		t.Errorf("Expected 200 with Bearer token, got %d", rec3.Code)
 	}
 
-	// 4. Valid x-api-key header -> 200
 	req4 := httptest.NewRequest("GET", "/v1/models", nil)
 	req4.Header.Set("x-api-key", "sk-secret-key")
 	rec4 := httptest.NewRecorder()
@@ -78,7 +74,6 @@ func TestAuthMatrix(t *testing.T) {
 		t.Errorf("Expected 200 with x-api-key, got %d", rec4.Code)
 	}
 
-	// 5. Valid x-goog-api-key header -> 200
 	req5 := httptest.NewRequest("GET", "/v1/models", nil)
 	req5.Header.Set("x-goog-api-key", "sk-secret-key")
 	rec5 := httptest.NewRecorder()
@@ -87,7 +82,6 @@ func TestAuthMatrix(t *testing.T) {
 		t.Errorf("Expected 200 with x-goog-api-key, got %d", rec5.Code)
 	}
 
-	// 6. Valid query param ?key= -> 200
 	req6 := httptest.NewRequest("GET", "/v1/models?key=sk-secret-key", nil)
 	rec6 := httptest.NewRecorder()
 	handler.ServeHTTP(rec6, req6)
@@ -129,7 +123,7 @@ func TestMarshalNoEscapeHTML(t *testing.T) {
 }
 
 func TestChunkedTransferEncoding(t *testing.T) {
-	// Verify that the server can parse request bodies via net/http transparent dechunking.
+
 	cfg := config.Default()
 	app := New(cfg, "test")
 	handler := app.Handler()
@@ -140,15 +134,13 @@ func TestChunkedTransferEncoding(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
-	// Should not be 400 (bad request) or 500 — it will be 502 (upstream unreachable) or 200,
-	// but not a body-parsing error.
 	if rec.Code == http.StatusBadRequest {
 		t.Errorf("Handler rejected valid JSON body, got %d", rec.Code)
 	}
 }
 
 func TestResponsesSequenceNumberOrder(t *testing.T) {
-	// Test BuildResponseOutput structure and verify format helpers produce consistent output.
+
 	output := format.BuildResponseOutput("Hello world", nil, "msg_test123")
 	if len(output) != 1 {
 		t.Fatalf("Expected 1 output item, got %d", len(output))
@@ -161,7 +153,6 @@ func TestResponsesSequenceNumberOrder(t *testing.T) {
 		t.Errorf("Expected id=msg_test123, got %v", item["id"])
 	}
 
-	// With tool calls
 	tc := models.OpenAIToolCall{
 		ID:   "call_abc123",
 		Type: "function",
@@ -171,7 +162,7 @@ func TestResponsesSequenceNumberOrder(t *testing.T) {
 		},
 	}
 	outputWithTools := format.BuildResponseOutput("", []models.OpenAIToolCall{tc}, "msg_456")
-	// When text is empty, only the function_call item is returned (no empty message).
+
 	if len(outputWithTools) != 1 {
 		t.Fatalf("Expected 1 output item (function_call only when text empty), got %d", len(outputWithTools))
 	}
@@ -182,8 +173,6 @@ func TestResponsesSequenceNumberOrder(t *testing.T) {
 		t.Errorf("Expected call_id=call_abc123, got %v", outputWithTools[0]["call_id"])
 	}
 
-	// Verify responses format: the non-streaming endpoint should accept valid structure.
-	// The responses API uses "input" field, not "messages".
 	cfg := config.Default()
 	app := New(cfg, "test")
 	handler := app.Handler()
@@ -194,7 +183,6 @@ func TestResponsesSequenceNumberOrder(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
-	// Should not be 400 (bad request) — may be 502 (upstream unreachable)
 	if rec.Code == http.StatusBadRequest {
 		t.Errorf("Responses endpoint rejected valid JSON, got %d: %s", rec.Code, rec.Body.String())
 	}

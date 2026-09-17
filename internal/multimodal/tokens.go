@@ -19,10 +19,6 @@ const (
 	TokenCacheTTL = 600 * time.Second
 )
 
-// Internal regex patterns used to extract hidden session tokens embedded in Gemini HTML responses:
-// - `qKIAYe`: Push-ID used as tenant identifier for image uploads
-// - `Ylro7b`: Client-Pctx (context token) required for image upload authorization
-// - `thykhd`: XSRF/AT token required for state-changing POST requests
 var (
 	rePushID = regexp.MustCompile(`"qKIAYe":"([^"]+)"`)
 	rePctx   = regexp.MustCompile(`"Ylro7b":"([^"]+)"`)
