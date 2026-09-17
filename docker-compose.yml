@@ -1,0 +1,10 @@
+services:
+  gemini-api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      # - API_KEYS=sk-key1,sk-key2
+      # - IMPERSONATE=chrome_120
+    restart: unless-stopped
