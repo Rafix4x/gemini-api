@@ -303,7 +303,7 @@ Without a cookie, Pro model names still respond but may be downgraded to a Flash
 
 - **Dual protocol** — one server answers both the OpenAI and native Gemini API shapes.
 - **Self-healing** — the upstream build id is refreshed automatically; no redeploys.
-- **Lightweight** — a single static Go binary; the browser session is provisioned lazily.
+- **Lightweight** — a single static Go binary; talks to Gemini with a browser-grade TLS fingerprint, no headless browser or Chromium.
 
 <br/>
 
