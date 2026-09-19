@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:4285F4,45:9B72CB,100:D96570&height=210&section=header&text=gemini-api&fontSize=74&fontColor=ffffff&fontAlignY=38&animation=fadeIn&desc=Gemini%20%E2%86%92%20OpenAI-%20%26%20Gemini-compatible%20gateway&descSize=17&descAlignY=60" width="100%" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:4285F4,45:9B72CB,100:D96570&height=210&section=header&text=gemini-api&fontSize=74&fontColor=ffffff&fontAlignY=38&animation=fadeIn&desc=OpenAI%20plus%20native%20Gemini%20gateway&descSize=17&descAlignY=60" width="100%" />
 
 <a href="#-quick-start">
   <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&duration=2800&pause=700&color=9B72CB&center=true&vCenter=true&width=720&lines=Two+APIs%2C+one+binary%3A+OpenAI+%2B+native+Gemini;Streaming+%E2%80%A2+Vision+%E2%80%A2+Tools+%E2%80%A2+Reasoning+control;No+account%2C+no+token+%E2%80%94+deploy+and+go." alt="Typing SVG" />
@@ -303,7 +303,7 @@ Without a cookie, Pro model names still respond but may be downgraded to a Flash
 
 - **Dual protocol** — one server answers both the OpenAI and native Gemini API shapes.
 - **Self-healing** — the upstream build id is refreshed automatically; no redeploys.
-- **Lightweight** — a single static Go binary; talks to Gemini with a browser-grade TLS fingerprint, no headless browser or Chromium.
+- **Lightweight** — a single static Go binary; the browser session is provisioned lazily.
 
 <br/>
 
