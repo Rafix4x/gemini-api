@@ -17,6 +17,10 @@ var (
 	reLongB64 = regexp.MustCompile(`^[A-Za-z0-9+/=\r\n]{64,}$`)
 )
 
+func SniffImageMime(b []byte) string {
+	return sniffImageMime(b)
+}
+
 func sniffImageMime(b []byte) string {
 	switch {
 	case len(b) >= 8 && b[0] == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G':

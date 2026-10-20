@@ -7,48 +7,58 @@ import (
 )
 
 type Config struct {
-	Port              int      `json:"port"`
-	Host              string   `json:"host"`
-	RetryAttempts     int      `json:"retry_attempts"`
-	RetryDelaySec     int      `json:"retry_delay_sec"`
-	RequestTimeoutSec int      `json:"request_timeout_sec"`
-	GeminiBL          string   `json:"gemini_bl"`
-	AuthUser          string   `json:"auth_user"`
-	XSRFToken         string   `json:"xsrf_token"`
-	DefaultModel      string   `json:"default_model"`
-	LogRequests       bool     `json:"log_requests"`
-	CookieFile        string   `json:"cookie_file"`
-	Proxy             string   `json:"proxy"`
-	APIKeys           []string `json:"api_keys"`
-	Impersonate       string   `json:"impersonate"`
-	TemporaryChats    bool     `json:"temporary_chats"`
-	UpstreamBase      string   `json:"upstream_base"`
-	ImageModel        string   `json:"image_model"`
-	ImageModelID      int      `json:"image_model_id"`
-	ImageMaxAgeMin    int      `json:"image_max_age_min"`
+	Port               int      `json:"port"`
+	Host               string   `json:"host"`
+	RetryAttempts      int      `json:"retry_attempts"`
+	RetryDelaySec      int      `json:"retry_delay_sec"`
+	RequestTimeoutSec  int      `json:"request_timeout_sec"`
+	GeminiBL           string   `json:"gemini_bl"`
+	AuthUser           string   `json:"auth_user"`
+	XSRFToken          string   `json:"xsrf_token"`
+	DefaultModel       string   `json:"default_model"`
+	LogRequests        bool     `json:"log_requests"`
+	CookieFile         string   `json:"cookie_file"`
+	Proxy              string   `json:"proxy"`
+	APIKeys            []string `json:"api_keys"`
+	Impersonate        string   `json:"impersonate"`
+	TemporaryChats     bool     `json:"temporary_chats"`
+	UpstreamBase       string   `json:"upstream_base"`
+	ImageModel         string   `json:"image_model"`
+	ImageBackend       string   `json:"image_backend"`
+	LocalImageURL      string   `json:"local_image_url"`
+	LocalImageProvider string   `json:"local_image_provider"`
+	LocalImageModel    string   `json:"local_image_model"`
+	LocalImageKey      string   `json:"local_image_key"`
+	ImageModelID       int      `json:"image_model_id"`
+	ImageMaxAgeMin     int      `json:"image_max_age_min"`
 }
 
 func Default() Config {
 	return Config{
-		Port:              8081,
-		Host:              "0.0.0.0",
-		RetryAttempts:     3,
-		RetryDelaySec:     2,
-		RequestTimeoutSec: 180,
-		GeminiBL:          "boq_assistant-bard-web-server_20260716.08_p0",
-		AuthUser:          "",
-		XSRFToken:         "",
-		DefaultModel:      "gemini-3.6-flash",
-		LogRequests:       true,
-		CookieFile:        "",
-		Proxy:             "",
-		APIKeys:           []string{},
-		Impersonate:       "",
-		TemporaryChats:    false,
-		UpstreamBase:      "https://gemini.google.com",
-		ImageModel:        "gemini-image",
-		ImageModelID:      7,
-		ImageMaxAgeMin:    30,
+		Port:               8081,
+		Host:               "0.0.0.0",
+		RetryAttempts:      3,
+		RetryDelaySec:      2,
+		RequestTimeoutSec:  180,
+		GeminiBL:           "boq_assistant-bard-web-server_20260716.08_p0",
+		AuthUser:           "",
+		XSRFToken:          "",
+		DefaultModel:       "gemini-3.6-flash",
+		LogRequests:        true,
+		CookieFile:         "",
+		Proxy:              "",
+		APIKeys:            []string{},
+		Impersonate:        "",
+		TemporaryChats:     false,
+		UpstreamBase:       "https://gemini.google.com",
+		ImageModel:         "gemini-image",
+		ImageBackend:       "gemini",
+		LocalImageURL:      "",
+		LocalImageProvider: "alpha",
+		LocalImageModel:    "flare",
+		LocalImageKey:      "",
+		ImageModelID:       7,
+		ImageMaxAgeMin:     30,
 	}
 }
 
@@ -64,25 +74,30 @@ func Load(path string) (Config, error) {
 	}
 
 	var aux struct {
-		Port              *int      `json:"port"`
-		Host              *string   `json:"host"`
-		RetryAttempts     *int      `json:"retry_attempts"`
-		RetryDelaySec     *int      `json:"retry_delay_sec"`
-		RequestTimeoutSec *int      `json:"request_timeout_sec"`
-		GeminiBL          *string   `json:"gemini_bl"`
-		AuthUser          *string   `json:"auth_user"`
-		XSRFToken         *string   `json:"xsrf_token"`
-		DefaultModel      *string   `json:"default_model"`
-		LogRequests       *bool     `json:"log_requests"`
-		CookieFile        *string   `json:"cookie_file"`
-		Proxy             *string   `json:"proxy"`
-		APIKeys           *[]string `json:"api_keys"`
-		Impersonate       *string   `json:"impersonate"`
-		TemporaryChats    *bool     `json:"temporary_chats"`
-		UpstreamBase      *string   `json:"upstream_base"`
-		ImageModel        *string   `json:"image_model"`
-		ImageModelID      *int      `json:"image_model_id"`
-		ImageMaxAgeMin    *int      `json:"image_max_age_min"`
+		Port               *int      `json:"port"`
+		Host               *string   `json:"host"`
+		RetryAttempts      *int      `json:"retry_attempts"`
+		RetryDelaySec      *int      `json:"retry_delay_sec"`
+		RequestTimeoutSec  *int      `json:"request_timeout_sec"`
+		GeminiBL           *string   `json:"gemini_bl"`
+		AuthUser           *string   `json:"auth_user"`
+		XSRFToken          *string   `json:"xsrf_token"`
+		DefaultModel       *string   `json:"default_model"`
+		LogRequests        *bool     `json:"log_requests"`
+		CookieFile         *string   `json:"cookie_file"`
+		Proxy              *string   `json:"proxy"`
+		APIKeys            *[]string `json:"api_keys"`
+		Impersonate        *string   `json:"impersonate"`
+		TemporaryChats     *bool     `json:"temporary_chats"`
+		UpstreamBase       *string   `json:"upstream_base"`
+		ImageModel         *string   `json:"image_model"`
+		ImageBackend       *string   `json:"image_backend"`
+		LocalImageURL      *string   `json:"local_image_url"`
+		LocalImageProvider *string   `json:"local_image_provider"`
+		LocalImageModel    *string   `json:"local_image_model"`
+		LocalImageKey      *string   `json:"local_image_key"`
+		ImageModelID       *int      `json:"image_model_id"`
+		ImageMaxAgeMin     *int      `json:"image_max_age_min"`
 	}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
@@ -139,6 +154,21 @@ func Load(path string) (Config, error) {
 	}
 	if aux.ImageModel != nil {
 		cfg.ImageModel = *aux.ImageModel
+	}
+	if aux.ImageBackend != nil {
+		cfg.ImageBackend = *aux.ImageBackend
+	}
+	if aux.LocalImageURL != nil {
+		cfg.LocalImageURL = *aux.LocalImageURL
+	}
+	if aux.LocalImageProvider != nil {
+		cfg.LocalImageProvider = *aux.LocalImageProvider
+	}
+	if aux.LocalImageModel != nil {
+		cfg.LocalImageModel = *aux.LocalImageModel
+	}
+	if aux.LocalImageKey != nil {
+		cfg.LocalImageKey = *aux.LocalImageKey
 	}
 	if aux.ImageModelID != nil {
 		cfg.ImageModelID = *aux.ImageModelID

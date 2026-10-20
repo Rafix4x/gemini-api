@@ -174,3 +174,104 @@ func TestImageGenerationsRejectsUnknownModel(t *testing.T) {
 		t.Fatalf("status = %d, want 400", resp.StatusCode)
 	}
 }
+
+func fakeLocalAPI(t *testing.T, seen *map[string]any) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	var self *httptest.Server
+	mux.HandleFunc("/api/generate", func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if seen != nil {
+			*seen = body
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success":  true,
+			"imageId":  "img_1",
+			"imageUrl": self.URL + "/img.png",
+		})
+	})
+	mux.HandleFunc("/img.png", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(testPNG())
+	})
+	ts := httptest.NewServer(mux)
+	self = ts
+	t.Cleanup(ts.Close)
+	return ts
+}
+
+func TestImageGenerationsLocalBackend(t *testing.T) {
+	var seen map[string]any
+	upstream := fakeLocalAPI(t, &seen)
+
+	cfg := config.Default()
+	cfg.UpstreamBase = "http://127.0.0.1:1"
+	cfg.ImageBackend = "local"
+	cfg.LocalImageURL = upstream.URL
+	cfg.LocalImageProvider = "alpha"
+	cfg.LocalImageModel = "flare"
+	cfg.RetryAttempts = 1
+	app := New(cfg, "test")
+	ts := httptest.NewServer(app.Handler())
+	defer ts.Close()
+
+	body, _ := json.Marshal(map[string]any{
+		"model":  "gemini-image",
+		"prompt": "a red bicycle",
+		"size":   "1024x1024",
+	})
+	resp, err := http.Post(ts.URL+"/v1/images/generations", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", resp.StatusCode, string(raw))
+	}
+	var out struct {
+		Data []struct {
+			URL string `json:"url"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		t.Fatalf("bad json: %v", err)
+	}
+	if len(out.Data) != 1 || out.Data[0].URL == "" {
+		t.Fatalf("no image url: %s", string(raw))
+	}
+	if seen["provider"] != "alpha" || seen["model"] != "flare" {
+		t.Fatalf("local api got %v", seen)
+	}
+	if seen["aspect_ratio"] != "1:1" {
+		t.Fatalf("aspect = %v, want 1:1", seen["aspect_ratio"])
+	}
+	imgResp, err := http.Get(out.Data[0].URL)
+	if err != nil {
+		t.Fatalf("image fetch failed: %v", err)
+	}
+	defer imgResp.Body.Close()
+	imgBytes, _ := io.ReadAll(imgResp.Body)
+	if !bytes.HasPrefix(imgBytes, []byte{0x89, 'P', 'N', 'G'}) {
+		t.Fatalf("not a png: %x", imgBytes[:4])
+	}
+}
+
+func TestAspectFromSize(t *testing.T) {
+	cases := map[string]string{
+		"1024x1024": "1:1",
+		"1920x1080": "16:9",
+		"1080x1920": "9:16",
+		"800x600":   "4:3",
+		"1200x800":  "3:2",
+		"":          "1:1",
+		"junk":      "1:1",
+	}
+	for in, want := range cases {
+		if got := aspectFromSize(in); got != want {
+			t.Errorf("aspectFromSize(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

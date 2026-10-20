@@ -21,6 +21,11 @@ cat > /app/config.json <<EOC
   "cookie_file": ${COOKIE_FILE:+"$COOKIE_FILE"}${COOKIE_FILE:-null},
   "image_model": "${IMAGE_MODEL:-gemini-image}",
   "image_model_id": ${IMAGE_MODEL_ID:-7},
+  "image_backend": "${IMAGE_BACKEND:-gemini}",
+  "local_image_url": "${LOCAL_IMAGE_URL:-}",
+  "local_image_provider": "${LOCAL_IMAGE_PROVIDER:-alpha}",
+  "local_image_model": "${LOCAL_IMAGE_MODEL:-flare}",
+  "local_image_key": "${LOCAL_IMAGE_KEY:-}",
   "proxy": null,
   "impersonate": ${IMPERSONATE:+"$IMPERSONATE"}${IMPERSONATE:-null},
   "log_requests": true

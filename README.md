@@ -273,6 +273,11 @@ The container reads `$PORT` automatically and health-checks at `GET /` and `GET 
 | `COOKIE_FILE` | *(empty)* | Path to `gemini.google.com` cookies (needed for image generation) |
 | `IMAGE_MODEL` | `gemini-image` | Model name used by `/v1/images/generations` |
 | `IMAGE_MODEL_ID` | `7` | Upstream model id of the image model |
+| `IMAGE_BACKEND` | `gemini` | `gemini` = the Gemini web upstream, `local` = another image API |
+| `LOCAL_IMAGE_URL` | *(empty)* | Base url of the `local` backend (e.g. `https://image-gen.example.com`) |
+| `LOCAL_IMAGE_PROVIDER` | `alpha` | Provider key for the `local` backend |
+| `LOCAL_IMAGE_MODEL` | `flare` | Model key for the `local` backend |
+| `LOCAL_IMAGE_KEY` | *(empty)* | Bearer token for the `local` backend |
 
 </div>
 
@@ -305,6 +310,12 @@ existing picture.
 > cookie the upstream answers *"can't create it right now … you're signed out"*
 > and the API returns that as a `502`. Point `COOKIE_FILE` at your
 > `gemini.google.com` cookies to enable it.
+>
+> Any other image API can be used instead: set `IMAGE_BACKEND=local` and point
+> `LOCAL_IMAGE_URL` at it. The backend is called with
+> `{"provider","model","prompt","quality","aspect_ratio","resolution","images"}`
+> and has to answer `{"success":true,"imageUrl":"…"}`; the bytes are then
+> downloaded and served from `/v1/images/{id}.png` like the Gemini path.
 
 ## 🍪 Pro models
 

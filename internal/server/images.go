@@ -173,7 +173,7 @@ func (a *App) handleImageGenerations(w http.ResponseWriter, r *http.Request) {
 		refs = uploaded
 	}
 
-	images, err := a.Gem.GenerateImage(prompt, a.Cfg.ImageModelID, 0, refs, nil)
+	images, err := a.generateImage(prompt, refs, req.Size, req.Quality)
 	if err != nil {
 		a.Logf("Image generation failed: %v", err)
 		writeJSON(w, http.StatusBadGateway, map[string]any{
@@ -204,6 +204,28 @@ func (a *App) handleImageGenerations(w http.ResponseWriter, r *http.Request) {
 		"created": created,
 		"data":    data,
 	})
+}
+
+// generateImage dispatches to the configured backend.
+func (a *App) generateImage(prompt string, refs []string, size, quality string) ([]imageBytes, error) {
+	if a.Cfg.ImageBackend == "local" {
+		cli := newLocalImageClient(a.Cfg.LocalImageURL, a.Cfg.LocalImageProvider, a.Cfg.LocalImageModel, a.Cfg.LocalImageKey, a.HTTPClient)
+		img, err := cli.Generate(prompt, refs, aspectFromSize(size), resolutionFromSize(size), quality)
+		if err != nil {
+			return nil, err
+		}
+		return []imageBytes{*img}, nil
+	}
+
+	raw, err := a.Gem.GenerateImage(prompt, a.Cfg.ImageModelID, 0, refs, nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]imageBytes, 0, len(raw))
+	for _, img := range raw {
+		out = append(out, imageBytes{Mime: img.Mime, Data: img.Data})
+	}
+	return out, nil
 }
 
 func (a *App) handleImageFile(w http.ResponseWriter, r *http.Request) {
