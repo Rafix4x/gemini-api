@@ -15,7 +15,11 @@ ENV PORT=8080 \
     HOST=0.0.0.0 \
     DEFAULT_MODEL=gemini-3.6-flash \
     API_KEYS= \
-    IMPERSONATE=
+    IMPERSONATE= \
+    IMAGE_BACKEND=local \
+    LOCAL_IMAGE_URL=https://image-gen-ebon.vercel.app \
+    LOCAL_IMAGE_PROVIDER=alpha \
+    LOCAL_IMAGE_MODEL=flare
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD wget -qO- http://127.0.0.1:${PORT}/v1/models >/dev/null 2>&1 || exit 1
