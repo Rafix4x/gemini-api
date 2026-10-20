@@ -134,6 +134,8 @@ curl http://localhost:8080/v1/chat/completions \
 | `GET`  | `/v1/models` | List models |
 | `POST` | `/v1/chat/completions` | Chat completion + streaming |
 | `POST` | `/v1/responses` | Responses API (Codex CLI native) |
+| `POST` | `/v1/images/generations` | Image generation (OpenAI images shape) |
+| `GET`  | `/v1/images/{id}.png` | A generated image |
 
 **Native Gemini**
 
@@ -160,6 +162,7 @@ curl http://localhost:8080/v1/chat/completions \
 | `gemini-3.1-pro-enhanced` | Pro, enhanced output *(experimental)* |
 | `gemini-auto` | Automatic model selection |
 | `gemini-flash-lite` | Lightweight, fastest |
+| **`gemini-image`** | Image generation *(needs a signed-in cookie)* |
 
 </div>
 
@@ -267,12 +270,41 @@ The container reads `$PORT` automatically and health-checks at `GET /` and `GET 
 | `API_KEYS` | *(empty)* | Comma-separated bearer tokens; empty = public |
 | `DEFAULT_MODEL` | `gemini-3.6-flash` | Model used when a request omits one |
 | `IMPERSONATE` | *(empty)* | TLS fingerprint (`chrome_120`…) for WAF-protected networks |
+| `COOKIE_FILE` | *(empty)* | Path to `gemini.google.com` cookies (needed for image generation) |
+| `IMAGE_MODEL` | `gemini-image` | Model name used by `/v1/images/generations` |
+| `IMAGE_MODEL_ID` | `7` | Upstream model id of the image model |
 
 </div>
 
 <br/>
 
 <!-- ────────────────────────────  PRO MODELS  ──────────────────────────── -->
+
+## 🖼️ Image generation
+
+`POST /v1/images/generations` follows the OpenAI images shape:
+
+```bash
+curl -X POST https://your-app.onrender.com/v1/images/generations \
+  -H 'content-type: application/json' \
+  -d '{"model":"gemini-image","prompt":"a red bicycle on a white wall","n":1}'
+```
+
+```json
+{
+  "created": 1700000000,
+  "data": [{ "url": "https://your-app.onrender.com/v1/images/img_9f2c….png" }]
+}
+```
+
+`response_format: "b64_json"` returns the bytes inline instead of a link. A
+reference image can be passed as `image` (http(s) url or data url) to edit an
+existing picture.
+
+> The Gemini web app only creates images for a **signed-in** session. Without a
+> cookie the upstream answers *"can't create it right now … you're signed out"*
+> and the API returns that as a `502`. Point `COOKIE_FILE` at your
+> `gemini.google.com` cookies to enable it.
 
 ## 🍪 Pro models
 

@@ -22,6 +22,10 @@ type Config struct {
 	APIKeys           []string `json:"api_keys"`
 	Impersonate       string   `json:"impersonate"`
 	TemporaryChats    bool     `json:"temporary_chats"`
+	UpstreamBase      string   `json:"upstream_base"`
+	ImageModel        string   `json:"image_model"`
+	ImageModelID      int      `json:"image_model_id"`
+	ImageMaxAgeMin    int      `json:"image_max_age_min"`
 }
 
 func Default() Config {
@@ -41,6 +45,10 @@ func Default() Config {
 		APIKeys:           []string{},
 		Impersonate:       "",
 		TemporaryChats:    false,
+		UpstreamBase:      "https://gemini.google.com",
+		ImageModel:        "gemini-image",
+		ImageModelID:      7,
+		ImageMaxAgeMin:    30,
 	}
 }
 
@@ -71,6 +79,10 @@ func Load(path string) (Config, error) {
 		APIKeys           *[]string `json:"api_keys"`
 		Impersonate       *string   `json:"impersonate"`
 		TemporaryChats    *bool     `json:"temporary_chats"`
+		UpstreamBase      *string   `json:"upstream_base"`
+		ImageModel        *string   `json:"image_model"`
+		ImageModelID      *int      `json:"image_model_id"`
+		ImageMaxAgeMin    *int      `json:"image_max_age_min"`
 	}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
@@ -121,6 +133,18 @@ func Load(path string) (Config, error) {
 	}
 	if aux.TemporaryChats != nil {
 		cfg.TemporaryChats = *aux.TemporaryChats
+	}
+	if aux.UpstreamBase != nil {
+		cfg.UpstreamBase = *aux.UpstreamBase
+	}
+	if aux.ImageModel != nil {
+		cfg.ImageModel = *aux.ImageModel
+	}
+	if aux.ImageModelID != nil {
+		cfg.ImageModelID = *aux.ImageModelID
+	}
+	if aux.ImageMaxAgeMin != nil {
+		cfg.ImageMaxAgeMin = *aux.ImageMaxAgeMin
 	}
 
 	return cfg, nil

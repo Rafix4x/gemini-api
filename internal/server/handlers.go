@@ -27,13 +27,17 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleModels(w http.ResponseWriter, r *http.Request) {
 	var data []map[string]any
 	for name, m := range models.MODELS {
-		data = append(data, map[string]any{
+		entry := map[string]any{
 			"id":          name,
 			"object":      "model",
 			"created":     1700000000,
 			"owned_by":    "google",
 			"description": m.Desc,
-		})
+		}
+		if m.Image {
+			entry["capabilities"] = []string{"image_generation"}
+		}
+		data = append(data, entry)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -45,11 +49,15 @@ func (a *App) handleModels(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleGoogleModels(w http.ResponseWriter, r *http.Request) {
 	var modelList []map[string]any
 	for name, m := range models.MODELS {
+		methods := []string{"generateContent", "streamGenerateContent"}
+		if m.Image {
+			methods = append(methods, "predict")
+		}
 		modelList = append(modelList, map[string]any{
-			"name":                        "models/" + name,
-			"displayName":                 name,
-			"description":                 m.Desc,
-			"supportedGenerationMethods": []string{"generateContent", "streamGenerateContent"},
+			"name":                       "models/" + name,
+			"displayName":                name,
+			"description":                m.Desc,
+			"supportedGenerationMethods": methods,
 		})
 	}
 

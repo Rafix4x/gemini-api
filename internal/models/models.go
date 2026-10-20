@@ -12,6 +12,7 @@ type Model struct {
 	Think int         `json:"think"`
 	Desc  string      `json:"desc"`
 	Extra map[int]any `json:"extra,omitempty"`
+	Image bool        `json:"image,omitempty"`
 }
 
 var MODELS = map[string]Model{
@@ -60,6 +61,12 @@ var MODELS = map[string]Model{
 		Mode:  6,
 		Think: 4,
 		Desc:  "Lightweight fast model",
+	},
+	"gemini-image": {
+		Mode:  7,
+		Think: 0,
+		Desc:  "Image generation (needs a signed-in session)",
+		Image: true,
 	},
 }
 

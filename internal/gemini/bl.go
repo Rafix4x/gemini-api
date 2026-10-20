@@ -9,13 +9,20 @@ import (
 	"time"
 )
 
-var reBL = regexp.MustCompile(`boq_assistant-bard-web-server_\d+\.\d+_p\d+`)
+var reBL = regexp.MustCompile(`boq_(?:assistant-bard-web-server|gemini-web-uiserver)_\d+\.\d+_p\d+`)
 
 func FetchLatestBL(client Requester) (string, error) {
+	return fetchLatestBLFrom(client, "https://gemini.google.com")
+}
+
+func fetchLatestBLFrom(client Requester, base string) (string, error) {
+	if base == "" {
+		base = "https://gemini.google.com"
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://gemini.google.com/app", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", base+"/app", nil)
 	if err != nil {
 		return "", err
 	}

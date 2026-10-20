@@ -101,7 +101,11 @@ func (c *Client) SetBL(bl string) {
 }
 
 func (c *Client) UpdateBLIfNeeded() (string, bool, error) {
-	newBL, err := FetchLatestBL(c.HTTP)
+	base := c.Cfg.UpstreamBase
+	if base == "" {
+		base = "https://gemini.google.com"
+	}
+	newBL, err := fetchLatestBLFrom(c.HTTP, base)
 	if err != nil {
 		return "", false, err
 	}
@@ -172,7 +176,7 @@ func (c *Client) triageStatus(resp *http.Response) error {
 	return nil
 }
 
-func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any) (string, error) {
+func (c *Client) rawGenerate(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any) (string, error) {
 	bodyStr := BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 	reqURL := BuildURL(c.Cfg, c.CurrentBL())
 	headers := c.buildHeaders()
@@ -199,7 +203,7 @@ func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []stri
 						c.Logf("BL auto-updated, retrying request")
 						bodyStr = BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 						reqURL = BuildURL(c.Cfg, c.CurrentBL())
-						attempt-- 
+						attempt--
 						continue
 					}
 				}
@@ -210,12 +214,7 @@ func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []stri
 				if err != nil {
 					lastErr = &UpstreamError{Kind: "transport", Msg: err.Error()}
 				} else {
-					text, err := ExtractResponseText(string(rawBytes))
-					if err != nil {
-						lastErr = &UpstreamError{Kind: "bard", Msg: err.Error()}
-					} else {
-						return text, nil
-					}
+					return string(rawBytes), nil
 				}
 			}
 		}
@@ -227,6 +226,30 @@ func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []stri
 	}
 
 	return "", lastErr
+}
+
+func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any) (string, error) {
+	raw, err := c.rawGenerate(prompt, modelID, thinkMode, fileRefs, extra)
+	if err != nil {
+		return "", err
+	}
+	return ExtractResponseText(raw)
+}
+
+func (c *Client) GenerateImage(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any) ([]ImageData, error) {
+	raw, err := c.rawGenerate(prompt, modelID, thinkMode, fileRefs, extra)
+	if err != nil {
+		return nil, err
+	}
+	images := ExtractImagesFromResponse(raw)
+	if len(images) == 0 {
+		text, _ := ExtractResponseText(raw)
+		if text == "" {
+			text = "no image in the upstream response"
+		}
+		return nil, fmt.Errorf("upstream returned no image: %s", text)
+	}
+	return images, nil
 }
 
 func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any, emit func(string) error) error {
@@ -261,7 +284,7 @@ func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs 
 						c.Logf("BL auto-updated, retrying stream request")
 						bodyStr = BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 						reqURL = BuildURL(c.Cfg, c.CurrentBL())
-						attempt-- 
+						attempt--
 						continue
 					}
 				}

@@ -89,8 +89,13 @@ func BuildURL(cfg config.Config, blOverride string) string {
 	if blOverride != "" {
 		bl = blOverride
 	}
+	base := cfg.UpstreamBase
+	if base == "" {
+		base = "https://gemini.google.com"
+	}
 	return fmt.Sprintf(
-		"https://gemini.google.com%s/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate?bl=%s&hl=en&_reqid=%d&rt=c",
+		"%s%s/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate?bl=%s&hl=en&_reqid=%d&rt=c",
+		base,
 		prefix,
 		bl,
 		reqid,
