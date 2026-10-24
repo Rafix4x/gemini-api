@@ -16,6 +16,16 @@ type Model struct {
 }
 
 var MODELS = map[string]Model{
+	"gemini-4-argon": {
+		Mode:  0,
+		Think: 4,
+		Desc:  "Flagship reasoning model, unified 1M context window (Gemini 4 Argon)",
+	},
+	"gemini-3.8-flash": {
+		Mode:  1,
+		Think: 4,
+		Desc:  "Most intelligent Flash, engineered for long-horizon software engineering (Gemini 3.8 Flash)",
+	},
 	"gemini-3.7-flash": {
 		Mode:  1,
 		Think: 4,

@@ -153,6 +153,8 @@ curl http://localhost:8080/v1/chat/completions \
 
 | Model | Notes |
 |:------|:------|
+| **`gemini-4-argon`** | Flagship reasoning model, unified 1M context window |
+| **`gemini-3.8-flash`** | Most intelligent Flash, long-horizon coding & agents |
 | **`gemini-3.6-flash`** | All-around model *(default)* |
 | `gemini-3.7-flash` | Latest all-around model |
 | `gemini-3.5-flash` | Alias for `gemini-3.6-flash` |
