@@ -1,434 +1,429 @@
-# gemini-api — OpenAI-compatible Gemini gateway (Go)
-
 <div align="center">
 
-![GitHub release](https://img.shields.io/github/v/release/Rafix4x/gemini-api?style=for-the-badge&color=4285F4)
-![Go](https://img.shields.io/badge/Go-1.26%2B-00ADD8?style=for-the-badge&logo=go&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Render](https://img.shields.io/badge/Render-deployable-46E3B7?style=for-the-badge&logo=render&logoColor=white)
-![License](https://img.shields.io/github/license/Rafix4x/gemini-api?style=for-the-badge&color=yellow)
+<img src="./gemini-api-logo.svg" alt="Gemini API — One gateway. Two API formats." width="900" />
 
-**One small static binary — two full API shapes.**
+# Gemini API
 
-OpenAI-compatible **and** native Gemini (`v1beta`) in a single Go binary. Anonymous out of the box, optional cookie for real Pro routing, optional bearer keys.
+### Your tools. Your infrastructure. One Gemini gateway.
+
+Connect OpenAI-compatible applications and Gemini-format clients to a self-hosted Go service—with streaming, tool calling, vision, and configurable image generation.
+
+![Go](https://img.shields.io/badge/Go-1.26.5%2B-00ADD8?style=flat-square&logo=go&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)
+![License](https://img.shields.io/github/license/Rafix4x/gemini-api?style=flat-square&color=8b5cf6)
+
+[Quick start](#quick-start) · [Examples](#examples) · [Configuration](#configuration) · [Deployment](#deployment) · [Troubleshooting](#troubleshooting)
 
 </div>
 
 ---
 
-## Table of contents
+## Overview
 
-1. [Features](#-features)
-2. [Quick start](#-quick-start)
-3. [API reference](#-api-reference)
-4. [Examples](#-examples)
-5. [SDK & tooling compatibility](#-sdk--tooling-compatibility)
-6. [Deploy](#-deploy)
-7. [Configuration](#-configuration)
-8. [Images](#-images)
-9. [Pro models](#-pro-models)
-10. [Reasoning levels](#-reasoning-levels)
-11. [Observability](#-observability--logs)
-12. [Security & hardening](#-security--hardening)
-13. [How it works](#-how-it-works)
-14. [Troubleshooting](#-troubleshooting)
-15. [Development](#-development)
-16. [License](#-license)
+**Gemini API bridges Gemini's web interface and familiar developer APIs.** Keep your application's existing request format, point it at your own gateway, and manage the service as a single Go binary or Docker container.
 
----
+Use it to prototype assistants, connect agent workflows, experiment with multimodal requests, or build a self-hosted integration layer.
 
-## ✨ Features
+> [!IMPORTANT]
+> This is an **unofficial gateway**, not Google's official Gemini API or an OpenAI service. It depends on Gemini's web behavior, which can change without notice. Anonymous access, model routing, quotas, and feature availability are not guaranteed. Review the applicable service terms and use only accounts and content you are authorized to access.
 
-| Area | What it delivers |
-|---|---|
-| **Dual protocol** | OpenAI shape `/v1/…` **and** native Gemini `/v1beta/…` from one server |
-| **Streaming** | Server-Sent Events (`"stream": true`) + `:streamGenerateContent` (ndjson) |
-| **Function calling** | OpenAI `tools` / `tool_calls` *and* Gemini `functionDeclarations` / `functionCall` |
-| **Vision** | `data:` URLs, `http(s)` image URLs, base64 PNG, inline Gemini `inlineData` |
-| **Reasoning control** | `@think=N` override (`0` deepest → `4` fastest) |
-| **Responses API** | `/v1/responses` — native Codex CLI support |
-| **Images** | `/v1/images/generations` (OpenAI images shape) + edits via reference image |
-| **Self-healing** | Auto-updates Gemini upstream build id on startup = survives upstream changes |
-| **Zero config** | Anonymous mode by default; optional bearer keys; static single binary |
-| **Env-first** | Every flag overridable via env vars |
+## Why Gemini API?
 
----
+| Capability | What you can build |
+| --- | --- |
+| **Two API formats** | Use OpenAI-style `/v1` routes or Gemini-style `/v1beta` routes from one server. |
+| **Streaming responses** | Deliver incremental output through OpenAI-style SSE or Gemini-style streaming. |
+| **Tool calling** | Connect model output to application-defined functions using either request format. |
+| **Vision input** | Send image URLs or inline image data alongside text. |
+| **Responses endpoint** | Integrate clients that use `/v1/responses`; validate the features your client requires. |
+| **Image workflows** | Generate images or provide a reference image through `/v1/images/generations`. |
+| **Reasoning selection** | Choose a reasoning level using the project's `@think=N` model suffix. |
+| **Self-hosted deployment** | Run a CGO-disabled Go build or the multi-stage Docker image. |
+| **Optional gateway authentication** | Require bearer tokens before exposing the service to other clients. |
 
-## ⚡ Quick start
+Anonymous chat is supported by the project without a Google API key or cookie. Signed-in features and image backends have separate requirements; see [Models and routing](#models-and-routing) and [Image generation](#image-generation).
 
-### Requirements
+## Quick start
 
-- Go ≥ 1.26.5 (bundled in official Docker image)
-- Docker 24+ (optional)
-
-### Build from source
+### 1. Get the source
 
 ```bash
-./build.sh              # emits ./gemini-api
-./gemini-api --port 8080
-
-# or, with a config file:
-cp config.json.example config.json   # if present
-./gemini-api --config config.json
+git clone https://github.com/Rafix4x/gemini-api.git
+cd gemini-api
 ```
 
-### Docker
+### 2. Start the gateway
+
+**Docker** — no local Go installation required:
 
 ```bash
-docker compose up --build
-# or, handheld:
 docker build -t gemini-api .
-docker run --rm -p 8080:8080 gemini-api
+docker run --rm -p 127.0.0.1:8080:8080 gemini-api
 ```
 
-### Verify
+The loopback-only port mapping keeps this quick-start instance off your public network.
+
+**From source** — requires Go **1.26.5 or newer**, as declared in `go.mod`:
 
 ```bash
-curl http://localhost:8080/
-curl http://localhost:8080/v1/models | jq .
+go mod download
+CGO_ENABLED=0 go build -ldflags="-s -w" -o gemini-api .
+./gemini-api -port 8080
 ```
 
-### First call
+> The binary's default port is **8081**. The Docker startup script defaults to **8080**. These examples explicitly use **8080** for consistency. The binary binds to `0.0.0.0` by default; set `host` to `127.0.0.1` in a configuration file for local-only source runs.
+
+### 3. Send your first request
 
 ```bash
-curl -s http://localhost:8080/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"gemini-3.6-flash","messages":[{"role":"user","content":"Capital of Bangladesh?"}]}' \
-  | jq '.choices[0].message.content'
-```
-
----
-
-## 📡 API reference
-
-### OpenAI-compatible surface
-
-| Method | Endpoint | Description |
-|:---:|---|---|
-| `GET`  | `/`                        | health / build / status |
-| `GET`  | `/v1/models`               | list OpenAI-style model objects |
-| `POST` | `/v1/chat/completions`     | chat + streaming |
-| `POST` | `/v1/responses`            | OpenAI Responses API (Codex-native) |
-| `POST` | `/v1/images/generations`   | image generation + edit |
-| `GET`  | `/v1/images/{id}.png`      | serve a generated image |
-
-### Native Gemini surface (`v1beta`)
-
-| Method | Endpoint | Description |
-|:---:|---|---|
-| `GET`  | `/v1beta/models`                                | list models in Gemini shape |
-| `POST` | `/v1beta/models/{model}:generateContent`         | generation (sync) |
-| `POST` | `/v1beta/models/{model}:streamGenerateContent`  | incremental stream (ndjson) |
-
-### Model registry
-
-| Model | Notes |
-|---|---|
-| `gemini-4-argon`                | flagship reasoning, unified 1M context |
-| `gemini-3.8-flash`              | most intelligent Flash (coding / agents) |
-| `gemini-3.6-flash`              | all-rounder *(default)* |
-| `gemini-3.7-flash`              | latest all-rounder, very strong reasoning |
-| `gemini-3.5-flash`              | alias → `gemini-3.6-flash` |
-| `gemini-3.5-flash-thinking`     | deep thinking, longest outputs |
-| `gemini-3.5-flash-thinking-lite`| adaptive-depth reasoning |
-| `gemini-3.1-pro`                | Pro *(cookie needed for real routing)* |
-| `gemini-3.1-pro-enhanced`       | Pro enhanced *(experimental)* |
-| `gemini-auto`                   | automatic model selection |
-| `gemini-flash-lite`             | lightweight & fastest |
-| `gemini-image`                  | image generation *(signed cookie needed)* |
-
-> 💡 **Reasoning override** – append `@think=N` (e.g. `gemini-3.6-flash@think=0` deepest … `@think=4` fastest). See [Reasoning levels](#-reasoning-levels).
-
----
-
-## 🧪 Examples
-
-### Sync chat
-
-```bash
-curl -s http://localhost:8080/v1/chat/completions \
+curl http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model":"gemini-3.6-flash",
-    "messages":[
-      {"role":"system","content":"Terse docs assistant."},
-      {"role":"user","content":"Explain SSE in 2 sentences."}
-    ],
-    "temperature":0.7,
-    "max_tokens":256
-  }'
-```
-
-### SSE streaming (OpenAI wire)
-
-```bash
-curl -N http://localhost:8080/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"gemini-3.6-flash","stream":true,"messages":[{"role":"user","content":"Count 1-5"}]}'
-```
-
-### Vision via data URL
-
-```bash
-curl -s http://localhost:8080/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model":"gemini-3.6-flash",
-    "messages":[
-      {"role":"user","content":[
-        {"type":"text","text":"Describe this image"},
-        {"type":"image_url","image_url":{"url":
-           "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA…"}}
-      ]}
+    "model": "gemini-3.6-flash",
+    "messages": [
+      {"role": "user", "content": "Explain an API gateway in two sentences."}
     ]
   }'
 ```
 
-### OpenAI function calling
+Check service status and discover the gateway's model registry:
 
 ```bash
-curl -s http://localhost:8080/v1/chat/completions \
+curl http://localhost:8080/
+curl http://localhost:8080/v1/models
+```
+
+A successful status or model-list response confirms that the gateway is reachable—not that an upstream generation request will succeed.
+
+## Examples
+
+### Stream a conversation
+
+Use `curl -N` to display events as they arrive:
+
+```bash
+curl -N http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model":"gemini-3.6-flash",
-    "messages":[{"role":"user","content":"Weather in Dhaka?"}],
-    "tools":[{"type":"function","function":{
-      "name":"get_weather","description":"Current weather of a city",
-      "parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
-    }}],
-    "tool_choice":"auto"
+    "model": "gemini-3.6-flash",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "Write a short welcome message for a developer platform."}
+    ]
   }'
 ```
 
-### Native Gemini shape
+### Connect an OpenAI Python client
+
+Install the client library:
 
 ```bash
-curl -s http://localhost:8080/v1beta/models/gemini-3.6-flash:generateContent \
+pip install openai
+```
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+    api_key=os.getenv("GEMINI_GATEWAY_KEY", "local-development"),
+)
+
+response = client.chat.completions.create(
+    model="gemini-3.6-flash",
+    messages=[{"role": "user", "content": "Give me three ideas for a useful CLI tool."}],
+)
+
+print(response.choices[0].message.content)
+```
+
+The SDK expects an API-key value even when gateway authentication is disabled. If you configure gateway keys, set `GEMINI_GATEWAY_KEY` to one of those keys. It is **not** a Google API key.
+
+Compatibility is endpoint-specific: OpenAI-shaped requests do not imply support for every OpenAI SDK feature, model parameter, or API product.
+
+### Give the model a tool
+
+```bash
+curl http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"contents":[{"parts":[{"text":"ping"}]}]}'
+  -d '{
+    "model": "gemini-3.6-flash",
+    "messages": [{"role": "user", "content": "What is the weather in Dhaka?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "parameters": {
+          "type": "object",
+          "properties": {"city": {"type": "string"}},
+          "required": ["city"]
+        }
+      }
+    }],
+    "tool_choice": "auto"
+  }'
 ```
 
----
+Your application must execute any returned tool call and supply the tool result in a follow-up request. Declaring a tool does not give the gateway access to a weather service.
 
-## 🧰 SDK & tooling compatibility
+### Send an image
 
-Point **any OpenAI/SSE-compatible client** to `http://HOST:PORT/v1`. Works great with:
-
-- OpenAI SDK (Python, Node, Go)
-- LangChain, LiteLLM
-- `curl`, `httpx`, fetch-style clients
-- Codex CLI (via `/v1/responses`)
-- Agent Zero and any OpenAI-compat consumers
-- Any Gemini SDK pointed at `/v1beta`
-
----
-
-## 🚀 Deploy
-
-### Render (free Web Service, Docker runtime)
-
-1. Push the repo to GitHub.
-2. Render → **New +** → Web Service → pick the repo.
-3. Runtime **Docker**, plan **Free**.
-4. Add env vars if desired → **Create**.
-5. Service URLs from `$PORT`, health checks at `GET /` & `GET /v1/models`.
-
-### Docker compose (VPS)
-
-```bash
-docker compose up --build -d
-```
-
-### Fly.io
-
-```bash
-fly launch --no-deploy
-fly deploy
-```
-
-### Any VPS (systemd)
-
-```bash
-sudo install -m 755 gemini-api /opt/gemini-api/gemini-api
-# /etc/systemd/system/gemini-api.service
-ExecStart=/opt/gemini-api/gemini-api --config /opt/gemini-api/config.json
-```
-
-> ⚠️ Vercel **won't work** — long-lived process required. Use Render, Docker, or a VPS.
-
----
-
-## ⚙️ Configuration
-
-The most important env vars (all pluggable in `start.sh`):
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `PORT`                  | `8080` (Docker) | listen port (Render injects) |
-| `HOST`                  | `0.0.0.0`       | bind address |
-| `API_KEYS`              | *(empty)*       | comma-separated bearer tokens, empty = public |
-| `DEFAULT_MODEL`         | `gemini-3.6-flash` | used when `model` missing |
-| `IMPERSONATE`           | *(empty)*       | TLS fingerprint like `chrome_120` |
-| `COOKIE_FILE`           | *(empty)*       | path to `gemini.google.com` cookies |
-| `PROXY` / `HTTP_PROXY`  | *(empty)*       | HTTP(S) proxy (config + std env) |
-| `IMAGE_MODEL`           | `gemini-image`  | exposed name for `/v1/images/generations` |
-| `IMAGE_MODEL_ID`        | `7`             | upstream model id for image model |
-| `IMAGE_BACKEND`         | `gemini`        | `gemini` web or `local` image API |
-| `LOCAL_IMAGE_URL`       | *(empty)*       | base url of `local` image backend |
-| `LOCAL_IMAGE_PROVIDER`  | `alpha`         | provider key for local backend |
-| `LOCAL_IMAGE_MODEL`     | `flare`         | model for local backend |
-| `LOCAL_IMAGE_KEY`       | *(empty)*       | bearer token for local backend |
-
-A `config.json` (JSON with keys matching flags) is the recommended production path. `start.sh` always regenerates a file from env for Docker run.
-
----
-
-## 🖼️ Images
-
-`POST /v1/images/generations` follows OpenAI `images` shape and supports edits:
-
-```bash
-curl -X POST https://yourapp.onrender.com/v1/images/generations \
-  -H 'content-type: application/json' \
-  -d '{"model":"gemini-image","prompt":"a red bicycle on a white wall","n":1}'
-```
+Supply an accessible image URL or a complete `data:image/...;base64,...` value in an OpenAI-style content array:
 
 ```json
 {
-  "created": 1700000000,
-  "data": [{ "url": "https://yourapp.onrender.com/v1/images/img_9f2c….png" }]
+  "model": "gemini-3.6-flash",
+  "messages": [{
+    "role": "user",
+    "content": [
+      {"type": "text", "text": "Describe this image."},
+      {"type": "image_url", "image_url": {"url": "<IMAGE_URL_OR_DATA_URL>"}}
+    ]
+  }]
 }
 ```
 
-- `response_format: "b64_json"` → inline bytes
-- `image` (http(s) URL, data URL, base64) → edit an existing image
-- Gemini web upstream requires a **signed session**; otherwise 502
-- Or use `IMAGE_BACKEND=local` with any backend that answers
-  `{ "success":true, "imageUrl":"…" }` plus download
+Replace the placeholder before sending this body to `/v1/chat/completions`. Gemini-format requests can use `inlineData`.
 
----
+### Use the Gemini request format
 
-## 🍪 Pro models
-
-Anonymous calls cover the **Flash tiers** (`0`-cool chain). Real `gemini-3.1-pro` routing requires a signed session:
-
-1. Export cookies from `gemini.google.com` while signed in (any cookie extension → JSON)
-2. Pass `--cookie-file /path/to/cookies.json` or `COOKIE_FILE`
-3. If your account demands, set `auth_user` / `xsrf_token` in `config.json`
-
-Without a cookie, Pro model names *still respond* but downgrade to a Flash tier.
-
----
-
-## 🧠 Reasoning levels
-
-All models accept the **`@think=N`** suffix:
-
-```
-gemini-3.6-flash@think=0   deepest reasoning (slow, largest output)
-gemini-3.6-flash@think=1   …
-gemini-3.6-flash@think=3   …
-gemini-3.6-flash@think=4   fastest (minimal reasoning)
+```bash
+curl http://localhost:8080/v1beta/models/gemini-3.6-flash:generateContent \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "contents": [{"parts": [{"text": "What makes a good developer README?"}]}]
+  }'
 ```
 
-- `think=0` and `think=1` unlock the `* -thinking` variants benefit (deep chain)
-- On-the-fly hints override without re-deploying
+## API reference
 
----
+| Method | Endpoint | Purpose |
+| :---: | --- | --- |
+| `GET` | `/` | Service status and build information |
+| `GET` | `/v1/models` | OpenAI-style model list |
+| `POST` | `/v1/chat/completions` | Chat completion; optional SSE streaming |
+| `POST` | `/v1/responses` | Responses-style requests |
+| `POST` | `/v1/images/generations` | Image generation and reference-image workflows |
+| `GET` | `/v1/images/{id}.png` | Retrieve a generated image |
+| `GET` | `/v1beta/models` | Gemini-style model list |
+| `POST` | `/v1beta/models/{model}:generateContent` | Gemini-format generation |
+| `POST` | `/v1beta/models/{model}:streamGenerateContent` | Gemini-format streaming; documented by this project as NDJSON |
 
-## 📊 Observability / logs
+OpenAI-compatible clients should use `http://localhost:8080/v1` as their base URL. Gemini-format integrations use the `/v1beta` route family; client configuration requirements may differ.
 
-- Structured startup banner (`gemini-web2api` version, host, models, cookie, proxy, impersonate…)
-- Per-request logging toggled by `log_requests` in `config.json`
-- Health check: `GET /` returns status, `GET /v1/models` probes end to end
-- Docker `HEALTHCHECK` polls `GET /v1/models`
-- Auto-refresh log: `BL auto-updated: …` when build id changed
+## Models and routing
 
----
+The following are **names in this project's registry**, not a guarantee of distinct upstream models, official Google model IDs, advertised context sizes, or account entitlement.
 
-## 🔒 Security & hardening
+| Registry name | Project routing / role |
+| --- | --- |
+| `gemini-3.6-flash` | Default chat selection |
+| `gemini-3.5-flash` | Alias using the same mode and reasoning defaults as `gemini-3.6-flash` |
+| `gemini-3.7-flash`, `gemini-3.8-flash` | Currently share the same mode and reasoning defaults as `gemini-3.6-flash` |
+| `gemini-4-argon` | Separate mode entry in the registry |
+| `gemini-3.5-flash-thinking` | Thinking-mode entry |
+| `gemini-3.5-flash-thinking-lite` | Adaptive-thinking entry |
+| `gemini-3.1-pro` | Pro routing; a signed-in session is required for actual Pro access |
+| `gemini-3.1-pro-enhanced` | Experimental Pro entry with extra routing options |
+| `gemini-auto` | Automatic-selection entry |
+| `gemini-flash-lite` | Lightweight-mode entry |
+| `gemini-image` | Image-model entry; behavior also depends on the configured image backend |
 
-- `go build -ldflags="-s -w"` — static, stripped binary
-- `chmod 600` cookie/config files (sticky sticky umask)
-- Bearer tokens (`API_KEYS`) → enforce with conventional OpenAI `Authorization`
-- Zero `CGO`, multi-stage Docker image (Alpine runtime)
-- Never leaks internal error details unless debug explicitly enabled
-- Upstream responses never proxy cookies back
+Request `/v1/models` for the names exposed by your deployment. See [`internal/models/models.go`](./internal/models/models.go) for the implementation. Unknown model names fall back to the configured default, so a successful response alone does not prove that a requested model name was used.
 
----
+### Reasoning levels
 
-## 🏗️ How it works
+Append `@think=N` to a registry name:
 
+```text
+gemini-3.6-flash@think=0
+gemini-3.6-flash@think=4
 ```
-┌────────────┐  OpenAI body  ┌──────────────┐   web protocol  ┌─────────┐
-│  your app  │ ─────JSON───▶ │  gemini-api  │ ──────────────▶ │ Gemini  │
-│OpenAI/Gem  │ ◀────JSON───── │   gateway    │ ◀────────────── │  web    │
-│  client    │                │ (Go, 1 bin)  │  stream tokens  └─────────┘
-└────────────┘                └──────┬───────┘
-                                      │  auto-refreshes upstream build id
-                                      ▼  on startup
-                                keeps working across Google releases
+
+The project documents `0` as deeper reasoning and `4` as faster/minimal reasoning. This is a gateway-specific control—not a standardized OpenAI parameter or a guarantee of upstream behavior.
+
+### Signed-in sessions
+
+The project documents that Pro names may fall back to Flash behavior without a signed-in session. Where authorized, supply a cookie file through `-cookie-file` or the JSON configuration's `cookie_file` field. Session-specific configuration also includes `auth_user` and `xsrf_token`.
+
+Treat cookies as credentials. Never commit them, paste them into issues, or include them in logs you share.
+
+## Configuration
+
+### Configure the binary
+
+Create a `config.json` file. This example is intentionally local-only:
+
+```json
+{
+  "host": "127.0.0.1",
+  "port": 8080,
+  "default_model": "gemini-3.6-flash",
+  "api_keys": [],
+  "retry_attempts": 3,
+  "retry_delay_sec": 2,
+  "request_timeout_sec": 180,
+  "log_requests": true,
+  "image_backend": "local"
+}
 ```
 
-- **Dual protocol** – one server speaks both OpenAI and native Gemini wire
-- **Self-healing** – build id refreshed automatically; no redeploy on upstream shuffles
-- **Lightweight** – single static binary, browser session provisioned lazily
+```bash
+./gemini-api -config ./config.json
+```
 
----
+Before a network-accessible deployment, populate `api_keys` with strong private tokens and set the intended bind address. Clients then send:
 
-## ❓ Troubleshooting
+```http
+Authorization: Bearer <YOUR_GATEWAY_KEY>
+```
 
-| Problem | Likely cause | Fix |
-|---|---|---|
-| `502` on image gen | no signed session | Set `COOKIE_FILE` or `IMAGE_BACKEND=local` |
-| Pro model is "Flash-like" | cookie not synced | Re-export cookies (expired); enable `auth_user` |
-| Cookie XSRF 400 | session rotation | Rotate cookie each several hours |
-| `429` from upstream | anon rate limiting | reuse `IMPERSONATE=chrome_120` or proxy |
-| Build id mismatch | Google released new | wait 30s for auto-refresh log |
-| SDK connection refused | wrong host/port, cert | verify `/v1/models`, env `OPENAI_BASE_URL` |
-| SSE truncation | proxy buffering | disable proxy buffer / use `X-Accel-Buffering: no` |
-| Permission denied | umask / chmod | ensure config/cookie mode 600 |
+Configuration-file discovery: explicit `-config`, then `GEMINI_WEB2API_CONFIG`, then `./config.json`, then `~/.config/gemini-web2api/config.json`. Supported command-line overrides include `-port`, `-cookie-file`, `-proxy`, and `-impersonate`.
 
----
+> [!WARNING]
+> The current binary logs a warning and continues with defaults if the selected configuration cannot be read or parsed. Confirm the effective configuration and verify authentication before exposing a deployment.
 
-## 🧑‍💻 Development
+### Configure Docker
+
+Docker's `start.sh` generates `/app/config.json` from selected environment variables. These are **startup-script settings**; the standalone binary does not automatically read all of them.
+
+| Variable | Docker startup default | Purpose |
+| --- | --- | --- |
+| `PORT` | `8080` | Listen port |
+| `HOST` | `0.0.0.0` | Bind address |
+| `API_KEYS` | Empty | Comma-separated gateway bearer tokens; empty disables token requirements |
+| `DEFAULT_MODEL` | `gemini-3.6-flash` | Default registry name |
+| `COOKIE_FILE` | Unset | Signed-in cookie-file path |
+| `IMPERSONATE` | Unset | Optional TLS fingerprint profile |
+| `IMAGE_MODEL` | `gemini-image` | Exposed image-model name |
+| `IMAGE_MODEL_ID` | `7` | Upstream image-mode identifier |
+| `IMAGE_BACKEND` | `local` | Select `local` or Gemini web image routing |
+| `LOCAL_IMAGE_URL` | `https://image-gen-ebon.vercel.app` | Default external image-backend URL |
+| `LOCAL_IMAGE_PROVIDER` | `alpha` | Local-backend provider selector |
+| `LOCAL_IMAGE_MODEL` | `flare` | Local-backend model selector |
+| `LOCAL_IMAGE_KEY` | Empty | Backend bearer token |
+
+> **Current startup caveat:** non-empty `COOKIE_FILE` or `IMPERSONATE` values are concatenated incorrectly by `start.sh` and can produce invalid JSON. Until the script is fixed, use an explicit JSON configuration and bypass the startup script for those options.
+
+For an explicit configuration, set `host` to `0.0.0.0` inside the container and mount the file read-only:
+
+```bash
+docker run --rm \
+  -p 127.0.0.1:8080:8080 \
+  -v "$PWD/config.json:/app/custom-config.json:ro" \
+  gemini-api /app/gemini-api -config /app/custom-config.json
+```
+
+Mount any referenced cookie file separately, read-only, using the container path specified in your configuration.
+
+## Image generation
+
+```bash
+curl http://localhost:8080/v1/images/generations \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "gemini-image",
+    "prompt": "A minimalist illustration of a mountain observatory at sunrise",
+    "n": 1
+  }'
+```
+
+The project documents URL responses, `response_format: "b64_json"`, and an `image` input for reference-image workflows.
+
+**Choose your backend deliberately:**
+
+- **`local` is the current default.** Despite its name, its default URL is an external service. Image requests are sent to that backend; review its privacy, reliability, and usage terms before sending sensitive material.
+- **`gemini` uses Gemini's web image workflow.** The project documents a signed-in session requirement for this mode.
+- For a different local-style backend, configure `local_image_url`, `local_image_provider`, `local_image_model`, and, when needed, `local_image_key`. The documented backend response includes `success` and `imageUrl` fields.
+
+Feature availability and output quality depend on the selected backend. Self-hosting this gateway does not make upstream model processing local.
+
+## Deployment
+
+### Docker or a VPS
+
+Build the image, configure authentication, and run it behind a TLS-enabled reverse proxy. Keep proxy buffering disabled for streaming routes and allow suitable timeouts for long-running requests.
+
+For a native deployment, supervise the binary with your process manager and use an explicit configuration file.
+
+### Render
+
+Create a Docker-based web service from this repository. The startup script reads the injected `PORT` variable. Configure private gateway keys, review startup logs, and test both a normal generation request and a streaming request after deployment.
+
+Use `GET /` as a service-status probe. The image's Docker health check polls `/v1/models`; that is not a full upstream generation test. Hosting availability, limits, and pricing depend on the platform.
+
+### Operational checklist
+
+- [ ] Configure and test gateway authentication, including rejection of an invalid token.
+- [ ] Enable HTTPS before accepting remote client traffic.
+- [ ] Keep configuration files and cookies out of version control.
+- [ ] Restrict access to generated images and review their retention requirements.
+- [ ] Review which upstream services receive prompts and images.
+- [ ] Monitor errors, timeouts, and rate limits; avoid logging sensitive payloads.
+- [ ] Confirm streaming works through your actual proxy or hosting platform.
+
+The gateway attempts to refresh Gemini's upstream build identifier at startup. This may help with some upstream changes, but it cannot guarantee compatibility with future web-protocol changes.
+
+## How it works
+
+```text
+Your application
+    │
+    ├── OpenAI-style requests  /v1
+    └── Gemini-style requests  /v1beta
+    │
+    ▼
+Gemini API gateway · Go
+    │
+    ├── Gemini web upstream · chat and supported multimodal workflows
+    └── Configured image backend · image-generation workflows
+```
+
+The gateway translates client requests into its upstream workflows and converts results back into the requested API format. Authentication at the gateway and authentication to an upstream service are separate concerns.
+
+## Troubleshooting
+
+| Symptom | What to check |
+| --- | --- |
+| Connection refused | Confirm the listen address, port, container mapping, and process logs. Remember the native default is `8081`, versus Docker's `8080`. |
+| Requests work without the intended key | Confirm that the configuration parsed successfully and `api_keys` is not empty. |
+| Cookie or TLS-profile settings do not load | Check the `start.sh` caveat above; use an explicit config and bypass the script. |
+| Pro output appears to use Flash | Check session validity and account access; model names alone do not guarantee upstream routing. |
+| Image generation fails | Check the selected backend, backend connectivity, credentials, and signed-session requirements. |
+| Rate limiting or upstream errors | Respect the upstream limit, reduce concurrency, and retry with backoff. |
+| Streaming arrives all at once | Check client buffering, reverse-proxy buffering, and hosting timeouts. |
+| Upstream changes break generation | Review startup build-refresh logs and repository updates. Refreshing the build identifier may not be sufficient. |
+| An SDK feature fails | Verify that its endpoint, request fields, and streaming format match this gateway's implementation. |
+
+When reporting an issue, include the gateway version, deployment method, selected route, and a minimal redacted request. Never include API keys, cookies, or private prompts.
+
+## Development and contributing
 
 ```bash
 go mod download
-go run . --port 8080        # dev (with full output)
-CGO_ENABLED=0 go build -ldflags="-s -w" -o gemini-api .    # release build
-go test ./...              # if tests exist
+go run . -port 8080
+go test ./...
+CGO_ENABLED=0 go build -ldflags="-s -w" -o gemini-api .
 ```
 
-- Modules in `go.mod` (bogdanfinn/tls-client for fingerprint)
-- HTTP core in `internal/server`, models in `internal/models`, config loader in `internal/config`
-- Contribute: PRs welcome; keep docs + API surface in sync
+Start with [`main.go`](./main.go), [`internal/config`](./internal/config), [`internal/models`](./internal/models), and [`internal/server`](./internal/server).
 
-### Repo layout
+Contributions are welcome. Keep changes focused, add or update tests for behavior changes, and keep examples aligned with the implemented API. For compatibility fixes, describe the observed upstream behavior without sharing session credentials.
 
-```
-gemini-api/
-├── main.go              # entry point & flags
-├── go.mod / go.sum
-├── Dockerfile / docker-compose.yml
-├── build.sh / start.sh
-├── internal/
-│   ├── config/    # load + defaults + env
-│   ├── models/    # registry & constants
-│   └── server/    # dual-protocol http router & handlers
-├── README.md
-└── LICENSE
-```
+## License and attribution
+
+Released under the [MIT License](./LICENSE). Copyright © 2026 Rafix4x.
+
+Gemini and Google are trademarks of their respective owners. This independent project is not affiliated with, endorsed by, or sponsored by Google or OpenAI. The accompanying gateway logo is original project artwork, not an official Google Gemini logo.
 
 ---
 
-## 📝 License
-
-MIT (per badging, check `LICENSE`). Not affiliated with Google.
-
-<br/>
-
 <div align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:D96570,50:9B72CB,100:4285F4&height=120&section=footer" width="100%" />
-  <sub>Built with Go · MIT Licensed · Not affiliated with Google</sub>
+
+**Build with familiar APIs. Keep control of your gateway.**
+
+If this project helps your workflow, consider starring the repository or contributing an improvement.
+
 </div>
