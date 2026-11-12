@@ -100,3 +100,33 @@ func ExtractResponseText(raw string) (string, error) {
 
 	return CleanText(lastText, true), nil
 }
+
+// ExtractResponseModel reads the upstream UI model label at payload index 42.
+// It does not inspect generated text or infer identity from a requested selector.
+func ExtractResponseModel(raw string) string {
+	var label string
+	for _, line := range strings.Split(raw, "\n") {
+		var frames [][]json.RawMessage
+		if json.Unmarshal([]byte(line), &frames) != nil {
+			continue
+		}
+		for _, frame := range frames {
+			if len(frame) < 3 {
+				continue
+			}
+			var kind, innerString string
+			if json.Unmarshal(frame[0], &kind) != nil || kind != "wrb.fr" || json.Unmarshal(frame[2], &innerString) != nil {
+				continue
+			}
+			var inner []json.RawMessage
+			if json.Unmarshal([]byte(innerString), &inner) != nil || len(inner) <= 42 {
+				continue
+			}
+			var current string
+			if json.Unmarshal(inner[42], &current) == nil && strings.TrimSpace(current) != "" {
+				label = current
+			}
+		}
+	}
+	return label
+}

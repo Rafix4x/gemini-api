@@ -81,7 +81,7 @@ func (a *App) handleGoogleGenerate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var fullText string
-		emitErr := a.Gem.GenerateStream(prompt, resolved.Mode, resolved.Think, fileRefs, resolved.Extra, func(delta string) error {
+		streamModel, emitErr := a.Gem.GenerateStreamWithModel(prompt, resolved.Mode, resolved.Think, fileRefs, resolved.Extra, func(delta, upstreamModel string) error {
 			if delta == "" {
 				return nil
 			}
@@ -98,7 +98,7 @@ func (a *App) handleGoogleGenerate(w http.ResponseWriter, r *http.Request) {
 						},
 					},
 				},
-				ModelVersion: resolved.Name,
+				ModelVersion: models.ResponseName(upstreamModel),
 			}
 			return writeSSEData(w, chunkObj)
 		})
@@ -118,7 +118,7 @@ func (a *App) handleGoogleGenerate(w http.ResponseWriter, r *http.Request) {
 					CandidatesTokenCount: candidatesTokens,
 					TotalTokenCount:      promptTokens + candidatesTokens,
 				},
-				ModelVersion: resolved.Name,
+				ModelVersion: models.ResponseName(streamModel),
 			}
 			_ = writeSSEData(w, finalChunk)
 		} else {
@@ -127,7 +127,7 @@ func (a *App) handleGoogleGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	text, err := a.Gem.Generate(prompt, resolved.Mode, resolved.Think, fileRefs, resolved.Extra)
+	text, upstreamModel, err := a.Gem.GenerateWithModel(prompt, resolved.Mode, resolved.Think, fileRefs, resolved.Extra)
 	if err != nil {
 		writeJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"message": fmt.Sprintf("upstream error: %v", err)}})
 		return
@@ -178,7 +178,7 @@ func (a *App) handleGoogleGenerate(w http.ResponseWriter, r *http.Request) {
 			CandidatesTokenCount: candidatesTokens,
 			TotalTokenCount:      promptTokens + candidatesTokens,
 		},
-		ModelVersion: resolved.Name,
+		ModelVersion: models.ResponseName(upstreamModel),
 	}
 
 	if stream {

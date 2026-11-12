@@ -13,7 +13,7 @@ COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 ENV PORT=8080 \
     HOST=0.0.0.0 \
-    DEFAULT_MODEL=gemini-3.6-flash \
+    DEFAULT_MODEL=gemini-3.5-flash-lite \
     API_KEYS= \
     IMPERSONATE= \
     IMAGE_BACKEND=local \

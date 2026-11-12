@@ -8,6 +8,7 @@ import (
 
 type StreamParser struct {
 	prevText string
+	model    string
 	buf      string
 }
 
@@ -15,8 +16,11 @@ func NewStreamParser() *StreamParser {
 	return &StreamParser{}
 }
 
+func (p *StreamParser) Model() string { return p.model }
+
 func (p *StreamParser) ResetBuffer() {
 	p.buf = ""
+	p.model = ""
 }
 
 func (p *StreamParser) Feed(chunk string) ([]string, error) {
@@ -34,6 +38,9 @@ func (p *StreamParser) Feed(chunk string) ([]string, error) {
 		line := p.buf[:idx]
 		p.buf = p.buf[idx+1:]
 
+		if label := ExtractResponseModel(line); label != "" {
+			p.model = label
+		}
 		texts := ExtractTextsFromLine(line)
 		for _, t := range texts {
 

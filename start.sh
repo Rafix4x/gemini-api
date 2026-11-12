@@ -16,7 +16,7 @@ cat > /app/config.json <<EOC
   "retry_attempts": 3,
   "retry_delay_sec": 2,
   "request_timeout_sec": 180,
-  "default_model": "${DEFAULT_MODEL:-gemini-3.6-flash}",
+  "default_model": "${DEFAULT_MODEL:-gemini-3.5-flash-lite}",
   "api_keys": ${KEYS_JSON},
   "cookie_file": ${COOKIE_FILE:+"$COOKIE_FILE"}${COOKIE_FILE:-null},
   "image_model": "${IMAGE_MODEL:-gemini-image}",

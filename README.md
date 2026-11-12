@@ -79,7 +79,7 @@ CGO_ENABLED=0 go build -ldflags="-s -w" -o gemini-api .
 curl http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "gemini-3.6-flash",
+    "model": "gemini-3.5-flash-lite",
     "messages": [
       {"role": "user", "content": "Explain an API gateway in two sentences."}
     ]
@@ -105,7 +105,7 @@ Use `curl -N` to display events as they arrive:
 curl -N http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "gemini-3.6-flash",
+    "model": "gemini-3.5-flash-lite",
     "stream": true,
     "messages": [
       {"role": "user", "content": "Write a short welcome message for a developer platform."}
@@ -131,7 +131,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="gemini-3.6-flash",
+    model="gemini-3.5-flash-lite",
     messages=[{"role": "user", "content": "Give me three ideas for a useful CLI tool."}],
 )
 
@@ -148,7 +148,7 @@ Compatibility is endpoint-specific: OpenAI-shaped requests do not imply support 
 curl http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "gemini-3.6-flash",
+    "model": "gemini-3.5-flash-lite",
     "messages": [{"role": "user", "content": "What is the weather in Dhaka?"}],
     "tools": [{
       "type": "function",
@@ -174,7 +174,7 @@ Supply an accessible image URL or a complete `data:image/...;base64,...` value i
 
 ```json
 {
-  "model": "gemini-3.6-flash",
+  "model": "gemini-3.5-flash-lite",
   "messages": [{
     "role": "user",
     "content": [
@@ -190,7 +190,7 @@ Replace the placeholder before sending this body to `/v1/chat/completions`. Gemi
 ### Use the Gemini request format
 
 ```bash
-curl http://localhost:8080/v1beta/models/gemini-3.6-flash:generateContent \
+curl http://localhost:8080/v1beta/models/gemini-3.5-flash-lite:generateContent \
   -H 'Content-Type: application/json' \
   -d '{
     "contents": [{"parts": [{"text": "What makes a good developer README?"}]}]
@@ -215,38 +215,45 @@ OpenAI-compatible clients should use `http://localhost:8080/v1` as their base UR
 
 ## Models and routing
 
-The following are **names in this project's registry**, not a guarantee of distinct upstream models, official Google model IDs, advertised context sizes, or account entitlement.
+The gateway exposes **one chat model: `gemini-3.5-flash-lite`**. This name is based
+on the model label reported in actual anonymous Gemini web response metadata,
+not on generated text or the name sent by the client.
 
-| Registry name | Project routing / role |
+On **2026-11-12**, live requests using the former selectors 0, 1, 2, 3, 4, 5 and 6
+all returned the upstream label **`3.5 Flash-Lite`** and response mode **6**.
+The old Flash version names also produced identical routing payloads. These tests
+establish the route observed for that anonymous session; account entitlements and
+future upstream changes can alter it.
+
+| Name | Behavior |
 | --- | --- |
-| `gemini-3.6-flash` | Default chat selection |
-| `gemini-3.5-flash` | Alias using the same mode and reasoning defaults as `gemini-3.6-flash` |
-| `gemini-3.7-flash`, `gemini-3.8-flash` | Currently share the same mode and reasoning defaults as `gemini-3.6-flash` |
-| `gemini-4-argon` | Separate mode entry in the registry |
-| `gemini-3.5-flash-thinking` | Thinking-mode entry |
-| `gemini-3.5-flash-thinking-lite` | Adaptive-thinking entry |
-| `gemini-3.1-pro` | Pro routing; a signed-in session is required for actual Pro access |
-| `gemini-3.1-pro-enhanced` | Experimental Pro entry with extra routing options |
-| `gemini-auto` | Automatic-selection entry |
-| `gemini-flash-lite` | Lightweight-mode entry |
-| `gemini-image` | Image-model entry; behavior also depends on the configured image backend |
+| `gemini-3.5-flash-lite` | The advertised and default chat route; sends selector 6. |
+| Old Flash, Thinking, Pro, Argon and Auto names | Removed; requests return HTTP 400. |
+| `gemini-image` | A separate image endpoint input, handled by the configured image backend; omitted from chat model lists. |
 
-Request `/v1/models` for the names exposed by your deployment. See [`internal/models/models.go`](./internal/models/models.go) for the implementation. Unknown model names fall back to the configured default, so a successful response alone does not prove that a requested model name was used.
+Chat completions, Responses and Gemini-format output report the upstream label
+from response metadata. When that metadata is unavailable, the response uses
+`gemini-web` instead of claiming a requested model. A streaming role-only opening
+chunk also uses `gemini-web` until upstream identity arrives. Unknown input model
+names return HTTP 400 instead of silently selecting the default.
+
+See [the model routing verification](docs/model-routing-verification.md) for the
+probe mapping and implementation checks.
 
 ### Reasoning levels
 
 Append `@think=N` to a registry name:
 
 ```text
-gemini-3.6-flash@think=0
-gemini-3.6-flash@think=4
+gemini-3.5-flash-lite@think=0
+gemini-3.5-flash-lite@think=4
 ```
 
 The project documents `0` as deeper reasoning and `4` as faster/minimal reasoning. This is a gateway-specific control—not a standardized OpenAI parameter or a guarantee of upstream behavior.
 
 ### Signed-in sessions
 
-The project documents that Pro names may fall back to Flash behavior without a signed-in session. Where authorized, supply a cookie file through `-cookie-file` or the JSON configuration's `cookie_file` field. Session-specific configuration also includes `auth_user` and `xsrf_token`.
+The former Pro and other model names are no longer accepted. A signed-in session may change upstream behavior; the response metadata remains the source of the reported model. Where authorized, supply a cookie file through `-cookie-file` or the JSON configuration's `cookie_file` field. Session-specific configuration also includes `auth_user` and `xsrf_token`.
 
 Treat cookies as credentials. Never commit them, paste them into issues, or include them in logs you share.
 
@@ -260,7 +267,7 @@ Create a `config.json` file. This example is intentionally local-only:
 {
   "host": "127.0.0.1",
   "port": 8080,
-  "default_model": "gemini-3.6-flash",
+  "default_model": "gemini-3.5-flash-lite",
   "api_keys": [],
   "retry_attempts": 3,
   "retry_delay_sec": 2,
@@ -294,7 +301,7 @@ Docker's `start.sh` generates `/app/config.json` from selected environment varia
 | `PORT` | `8080` | Listen port |
 | `HOST` | `0.0.0.0` | Bind address |
 | `API_KEYS` | Empty | Comma-separated gateway bearer tokens; empty disables token requirements |
-| `DEFAULT_MODEL` | `gemini-3.6-flash` | Default registry name |
+| `DEFAULT_MODEL` | `gemini-3.5-flash-lite` | Default registry name |
 | `COOKIE_FILE` | Unset | Signed-in cookie-file path |
 | `IMPERSONATE` | Unset | Optional TLS fingerprint profile |
 | `IMAGE_MODEL` | `gemini-image` | Exposed image-model name |
@@ -390,7 +397,7 @@ The gateway translates client requests into its upstream workflows and converts 
 | Connection refused | Confirm the listen address, port, container mapping, and process logs. Remember the native default is `8081`, versus Docker's `8080`. |
 | Requests work without the intended key | Confirm that the configuration parsed successfully and `api_keys` is not empty. |
 | Cookie or TLS-profile settings do not load | Check the `start.sh` caveat above; use an explicit config and bypass the script. |
-| Pro output appears to use Flash | Check session validity and account access; model names alone do not guarantee upstream routing. |
+| Old Pro/Flash model name returns HTTP 400 | Change the request and configured default to `gemini-3.5-flash-lite`. |
 | Image generation fails | Check the selected backend, backend connectivity, credentials, and signed-session requirements. |
 | Rate limiting or upstream errors | Respect the upstream limit, reduce concurrency, and retry with backoff. |
 | Streaming arrives all at once | Check client buffering, reverse-proxy buffering, and hosting timeouts. |

@@ -98,7 +98,7 @@ func (a *App) handleResponses(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	text, err := a.Gem.Generate(prompt, resolved.Mode, resolved.Think, fileRefs, resolved.Extra)
+	text, upstreamModel, err := a.Gem.GenerateWithModel(prompt, resolved.Mode, resolved.Think, fileRefs, resolved.Extra)
 	if err != nil {
 		writeJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"message": fmt.Sprintf("upstream error: %v", err)}})
 		return
@@ -148,7 +148,7 @@ func (a *App) handleResponses(w http.ResponseWriter, r *http.Request) {
 			"id":         rid,
 			"object":     "response",
 			"created_at": time.Now().Unix(),
-			"model":      resolved.Name,
+			"model":      models.ResponseName(upstreamModel),
 		}
 		withStatus := func(status string, output any, use map[string]any) map[string]any {
 			r := map[string]any{
@@ -270,7 +270,7 @@ func (a *App) handleResponses(w http.ResponseWriter, r *http.Request) {
 			"object":     "response",
 			"created_at": time.Now().Unix(),
 			"status":     "completed",
-			"model":      resolved.Name,
+			"model":      models.ResponseName(upstreamModel),
 			"output":     outputItems,
 			"usage": map[string]any{
 				"input_tokens":  promptTokens,

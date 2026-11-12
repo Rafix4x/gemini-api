@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -15,69 +14,13 @@ type Model struct {
 	Image bool        `json:"image,omitempty"`
 }
 
+// Anonymous upstream responses reported "3.5 Flash-Lite" (mode 6) for every
+// tested chat selector. Expose that single route instead of invented versions.
+const DefaultModelName = "gemini-3.5-flash-lite"
+const UnknownUpstreamModel = "gemini-web"
+
 var MODELS = map[string]Model{
-	"gemini-4-argon": {
-		Mode:  0,
-		Think: 4,
-		Desc:  "Flagship reasoning model, unified 1M context window (Gemini 4 Argon)",
-	},
-	"gemini-3.8-flash": {
-		Mode:  1,
-		Think: 4,
-		Desc:  "Most intelligent Flash, engineered for long-horizon software engineering (Gemini 3.8 Flash)",
-	},
-	"gemini-3.7-flash": {
-		Mode:  1,
-		Think: 4,
-		Desc:  "Latest all-around model (Gemini 3.7 Flash)",
-	},
-	"gemini-3.6-flash": {
-		Mode:  1,
-		Think: 4,
-		Desc:  "All-around model (Gemini 3.6 Flash)",
-	},
-	"gemini-3.5-flash": {
-		Mode:  1,
-		Think: 4,
-		Desc:  "Alias for gemini-3.6-flash (backend upgraded)",
-	},
-	"gemini-3.5-flash-thinking": {
-		Mode:  2,
-		Think: 0,
-		Desc:  "Deep thinking mode, longest output (~20k chars)",
-	},
-	"gemini-3.1-pro": {
-		Mode:  3,
-		Think: 4,
-		Desc:  "Pro model (requires cookie for real routing)",
-	},
-	"gemini-3.1-pro-enhanced": {
-		Mode:  3,
-		Think: 4,
-		Desc:  "Pro with enhanced output (experimental)",
-		Extra: map[int]any{31: 2, 80: 3},
-	},
-	"gemini-auto": {
-		Mode:  4,
-		Think: 4,
-		Desc:  "Auto model selection",
-	},
-	"gemini-3.5-flash-thinking-lite": {
-		Mode:  5,
-		Think: 0,
-		Desc:  "Dynamic thinking with adaptive depth",
-	},
-	"gemini-flash-lite": {
-		Mode:  6,
-		Think: 4,
-		Desc:  "Lightweight fast model",
-	},
-	"gemini-image": {
-		Mode:  7,
-		Think: 0,
-		Desc:  "Image generation (needs a signed-in session)",
-		Image: true,
-	},
+	DefaultModelName: {Mode: 6, Think: 4, Desc: "Gemini web chat; anonymous upstream metadata reported 3.5 Flash-Lite. Account routing can change."},
 }
 
 type Resolved struct {
@@ -87,40 +30,52 @@ type Resolved struct {
 	Extra map[int]any
 }
 
-const DefaultModelName = "gemini-3.6-flash"
-
 func Resolve(modelName, defaultName string) (Resolved, error) {
-	if defaultName == "" {
-		defaultName = DefaultModelName
+	if modelName == "" {
+		modelName = defaultName
+		if modelName == "" {
+			modelName = DefaultModelName
+		}
 	}
-
 	var thinkOverride *int
 	if idx := strings.LastIndex(modelName, "@think="); idx != -1 {
-		thinkStr := modelName[idx+len("@think="):]
-		modelName = modelName[:idx]
-		val, err := strconv.Atoi(thinkStr)
-		if err != nil {
-			return Resolved{}, fmt.Errorf("Invalid think level: %s", thinkStr)
+		value, err := strconv.Atoi(modelName[idx+len("@think="):])
+		if err != nil || value < 0 || value > 4 {
+			return Resolved{}, fmt.Errorf("think level must be an integer from 0 to 4")
 		}
-		thinkOverride = &val
+		modelName = modelName[:idx]
+		thinkOverride = &value
 	}
-
 	cfg, exists := MODELS[modelName]
 	if !exists {
-		log.Printf("Unknown model '%s', falling back to '%s'", modelName, defaultName)
-		modelName = defaultName
-		cfg = MODELS[defaultName]
+		return Resolved{}, fmt.Errorf("unknown chat model %q; use %q", modelName, DefaultModelName)
 	}
-
-	thinkMode := cfg.Think
+	think := cfg.Think
 	if thinkOverride != nil {
-		thinkMode = *thinkOverride
+		think = *thinkOverride
 	}
+	return Resolved{Name: modelName, Mode: cfg.Mode, Think: think, Extra: cfg.Extra}, nil
+}
 
-	return Resolved{
-		Name:  modelName,
-		Mode:  cfg.Mode,
-		Think: thinkMode,
-		Extra: cfg.Extra,
-	}, nil
+// ResponseName uses the model label from upstream metadata, never model prose
+// or the name requested by the caller. Missing metadata stays explicitly unknown.
+func ResponseName(label string) string {
+	label = strings.TrimSpace(strings.ToLower(label))
+	if label == "" {
+		return UnknownUpstreamModel
+	}
+	label = strings.TrimPrefix(label, "gemini ")
+	label = strings.ReplaceAll(label, " ", "-")
+	if !strings.HasPrefix(label, "gemini-") {
+		label = "gemini-" + label
+	}
+	if len(label) > 100 {
+		return UnknownUpstreamModel
+	}
+	for _, char := range label {
+		if !(char >= 'a' && char <= 'z' || char >= '0' && char <= '9' || char == '-' || char == '.') {
+			return UnknownUpstreamModel
+		}
+	}
+	return label
 }

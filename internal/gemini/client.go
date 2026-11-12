@@ -50,12 +50,12 @@ func NewClient(cfg config.Config) *Client {
 
 	if req == nil {
 		transport := &http.Transport{
-			DisableCompression:    true,
-			MaxIdleConns:          100,
-			MaxIdleConnsPerHost:   20,
-			IdleConnTimeout:       90 * time.Second,
-			DisableKeepAlives:     false,
-			ForceAttemptHTTP2:     false,
+			DisableCompression:  true,
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 20,
+			IdleConnTimeout:     90 * time.Second,
+			DisableKeepAlives:   false,
+			ForceAttemptHTTP2:   false,
 		}
 
 		if cfg.Proxy != "" {
@@ -234,11 +234,17 @@ func (c *Client) rawGenerate(prompt string, modelID, thinkMode int, fileRefs []s
 }
 
 func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any) (string, error) {
+	text, _, err := c.GenerateWithModel(prompt, modelID, thinkMode, fileRefs, extra)
+	return text, err
+}
+
+func (c *Client) GenerateWithModel(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any) (string, string, error) {
 	raw, err := c.rawGenerate(prompt, modelID, thinkMode, fileRefs, extra)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return ExtractResponseText(raw)
+	text, err := ExtractResponseText(raw)
+	return text, ExtractResponseModel(raw), err
 }
 
 func (c *Client) GenerateImage(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any) ([]ImageData, error) {
@@ -258,6 +264,11 @@ func (c *Client) GenerateImage(prompt string, modelID, thinkMode int, fileRefs [
 }
 
 func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any, emit func(string) error) error {
+	_, err := c.GenerateStreamWithModel(prompt, modelID, thinkMode, fileRefs, extra, func(delta, _ string) error { return emit(delta) })
+	return err
+}
+
+func (c *Client) GenerateStreamWithModel(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any, emit func(string, string) error) (string, error) {
 	bodyStr := BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 	reqURL := BuildURL(c.Cfg, c.CurrentBL())
 	headers := c.buildHeaders()
@@ -272,7 +283,7 @@ func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs 
 
 		req, err := http.NewRequest("POST", reqURL, strings.NewReader(bodyStr))
 		if err != nil {
-			return err
+			return parser.Model(), err
 		}
 		req.Header = headers.Clone()
 
@@ -298,10 +309,10 @@ func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs 
 				err = c.streamAttempt(resp.Body, parser, emit)
 				_ = resp.Body.Close()
 				if err == nil {
-					return nil
+					return parser.Model(), nil
 				}
 				if isClientDisconnect(err) {
-					return err
+					return parser.Model(), err
 				}
 				lastErr = err
 			}
@@ -313,10 +324,10 @@ func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs 
 		}
 	}
 
-	return lastErr
+	return parser.Model(), lastErr
 }
 
-func (c *Client) streamAttempt(body io.Reader, parser *StreamParser, emit func(string) error) error {
+func (c *Client) streamAttempt(body io.Reader, parser *StreamParser, emit func(string, string) error) error {
 	reader := bufio.NewReader(body)
 	for {
 		lineBytes, err := reader.ReadBytes('\n')
@@ -326,7 +337,7 @@ func (c *Client) streamAttempt(body io.Reader, parser *StreamParser, emit func(s
 				return &UpstreamError{Kind: "bard", Msg: parseErr.Error()}
 			}
 			for _, delta := range deltas {
-				if err := emit(delta); err != nil {
+				if err := emit(delta, parser.Model()); err != nil {
 					return err
 				}
 			}
