@@ -1,0 +1,9 @@
+.git
+.vercel
+.env*
+config.json
+cookie*.txt
+*.log
+*.test
+**/*_test.go
+gemini-api

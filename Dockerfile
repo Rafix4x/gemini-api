@@ -6,13 +6,14 @@ COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/gemini-api .
 
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata jq
 WORKDIR /app
 COPY --from=build /out/gemini-api /app/gemini-api
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
-ENV PORT=8080 \
+ENV PORT=80 \
     HOST=0.0.0.0 \
+    TMPDIR=/tmp \
     DEFAULT_MODEL=gemini-3.5-flash-lite \
     API_KEYS= \
     IMPERSONATE= \
@@ -20,7 +21,7 @@ ENV PORT=8080 \
     LOCAL_IMAGE_URL=https://image-gen-ebon.vercel.app \
     LOCAL_IMAGE_PROVIDER=alpha \
     LOCAL_IMAGE_MODEL=flare
-EXPOSE 8080
+EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD wget -qO- http://127.0.0.1:${PORT}/v1/models >/dev/null 2>&1 || exit 1
 CMD ["sh", "/app/start.sh"]

@@ -58,7 +58,7 @@ cd gemini-api
 
 ```bash
 docker build -t gemini-api .
-docker run --rm -p 127.0.0.1:8080:8080 gemini-api
+docker run --rm -p 127.0.0.1:8080:80 gemini-api
 ```
 
 The loopback-only port mapping keeps this quick-start instance off your public network.
@@ -71,7 +71,7 @@ CGO_ENABLED=0 go build -ldflags="-s -w" -o gemini-api .
 ./gemini-api -port 8080
 ```
 
-> The binary's default port is **8081**. The Docker startup script defaults to **8080**. These examples explicitly use **8080** for consistency. The binary binds to `0.0.0.0` by default; set `host` to `127.0.0.1` in a configuration file for local-only source runs.
+> The binary's default port is **8081**. The Docker image listens on **80**, matching Vercel's container default; the example maps it to local port **8080**. The binary binds to `0.0.0.0` by default; set `host` to `127.0.0.1` in a configuration file for local-only source runs.
 
 ### 3. Send your first request
 
@@ -294,11 +294,15 @@ Configuration-file discovery: explicit `-config`, then `GEMINI_WEB2API_CONFIG`, 
 
 ### Configure Docker
 
-Docker's `start.sh` generates `/app/config.json` from selected environment variables. These are **startup-script settings**; the standalone binary does not automatically read all of them.
+Docker's `start.sh` generates a private configuration file in `$TMPDIR`, which is
+writable even when the application filesystem is read-only. The script uses
+`jq` to escape environment values and rejects invalid port values before starting.
+These are **startup-script settings**; the standalone binary does not
+automatically read all of them.
 
 | Variable | Docker startup default | Purpose |
 | --- | --- | --- |
-| `PORT` | `8080` | Listen port |
+| `PORT` | `80` | Listen port; matches Vercel's default without a dashboard override |
 | `HOST` | `0.0.0.0` | Bind address |
 | `API_KEYS` | Empty | Comma-separated gateway bearer tokens; empty disables token requirements |
 | `DEFAULT_MODEL` | `gemini-3.5-flash-lite` | Default registry name |
@@ -312,7 +316,8 @@ Docker's `start.sh` generates `/app/config.json` from selected environment varia
 | `LOCAL_IMAGE_MODEL` | `flare` | Local-backend model selector |
 | `LOCAL_IMAGE_KEY` | Empty | Backend bearer token |
 
-> **Current startup caveat:** non-empty `COOKIE_FILE` or `IMPERSONATE` values are concatenated incorrectly by `start.sh` and can produce invalid JSON. Until the script is fixed, use an explicit JSON configuration and bypass the startup script for those options.
+Optional cookie paths, TLS profiles and keys are serialized as JSON strings;
+unset cookie paths and TLS profiles use `null`.
 
 For an explicit configuration, set `host` to `0.0.0.0` inside the container and mount the file read-only:
 
@@ -361,6 +366,25 @@ Create a Docker-based web service from this repository. The startup script reads
 
 Use `GET /` as a service-status probe. The image's Docker health check polls `/v1/models`; that is not a full upstream generation test. Hosting availability, limits, and pricing depend on the platform.
 
+### Vercel Container Runtime
+
+Import `Rafix4x/gemini-api` into Vercel and deploy with the repository root as the
+Root Directory. The committed `vercel.json` selects the `container` framework,
+and Vercel builds the root Dockerfile. No environment variables, custom build
+command or output directory are required for the default anonymous chat route.
+The image listens on `0.0.0.0:80`, which matches Vercel's default container port.
+
+The deployed OpenAI-compatible base URL is `https://YOUR-DEPLOYMENT.vercel.app/v1`.
+Check `/v1/models`, then test normal chat and streaming after deployment. Existing
+project environment overrides still take precedence; remove stale model or port
+overrides if reusing an older project.
+
+Container Runtime is currently in beta on all plans and uses Vercel Function
+scaling and limits. Instance memory and scratch files are temporary. Generated
+image URLs backed by the in-memory image store are not durable across instances;
+use `response_format: "b64_json"` when retrieving image bytes directly.
+See [Vercel's Container Runtime documentation](https://vercel.com/docs/functions/runtimes/container).
+
 ### Operational checklist
 
 - [ ] Configure and test gateway authentication, including rejection of an invalid token.
@@ -394,9 +418,9 @@ The gateway translates client requests into its upstream workflows and converts 
 
 | Symptom | What to check |
 | --- | --- |
-| Connection refused | Confirm the listen address, port, container mapping, and process logs. Remember the native default is `8081`, versus Docker's `8080`. |
+| Connection refused | Confirm the listen address, port, container mapping, and process logs. Remember the native default is `8081`, versus Docker's `80`. |
 | Requests work without the intended key | Confirm that the configuration parsed successfully and `api_keys` is not empty. |
-| Cookie or TLS-profile settings do not load | Check the `start.sh` caveat above; use an explicit config and bypass the script. |
+| Cookie or TLS-profile settings do not load | Check the cookie mount path and profile value; use an explicit config to inspect the intended settings. |
 | Old Pro/Flash model name returns HTTP 400 | Change the request and configured default to `gemini-3.5-flash-lite`. |
 | Image generation fails | Check the selected backend, backend connectivity, credentials, and signed-session requirements. |
 | Rate limiting or upstream errors | Respect the upstream limit, reduce concurrency, and retry with backoff. |
